@@ -50,6 +50,8 @@ const ui = {
     btnPause:           document.getElementById("btnPause"),
     btnReset:           document.getElementById("btnReset"),
     btnSpeed:           document.getElementById("btnSpeed"),
+    btnSpeedLabel:      document.getElementById("btnSpeedLabel"),
+    btnLang:            document.getElementById("btnLang"),
     btnWebster:         document.getElementById("btnWebster"),
     btnOversat:         document.getElementById("btnOversat"),
     btnGreenWave:       document.getElementById("btnGreenWave"),
@@ -148,8 +150,15 @@ function runWebsterOptimization() {
 
     state.overlays.push({
         type: "webster",
-        text: `Webster 最优: C=${adjustedCycle}s · 北${greens[0]}s 南${greens[1]}s 东${greens[2]}s 西${greens[3]}s`,
-        ttl:  5,
+        messageKey: "overlay.webster",
+        messageParams: {
+            cycle: adjustedCycle,
+            north: greens[0],
+            south: greens[1],
+            east: greens[2],
+            west: greens[3]
+        },
+        ttl:  5
     });
 }
 
@@ -166,7 +175,7 @@ function setOversaturatedDemo() {
     [18, 18, 16, 16].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
     syncGreensFromCycle();
     applySignalSettings();
-    state.overlays.push({ type: "overflow", text: "过饱和场景已加载: v/c > 1，观察队列持续溢出", ttl: 6 });
+    state.overlays.push({ type: "overflow", messageKey: "overlay.oversatLoaded", ttl: 6 });
 }
 
 function setGreenWaveDemo() {
@@ -179,9 +188,14 @@ function setGreenWaveDemo() {
         [22, 22, 12, 12].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
         setSlider(ui.cycle, ui.cycleValue, 84);
         syncCycleFromGreens();
-        state.overlays.push({ type: "greenwave", text: "绿波协调启用: 主走廊相位差 8s，观察车辆连续通过", ttl: 6 });
+        state.overlays.push({
+            type: "greenwave",
+            messageKey: "overlay.greenwaveOn",
+            messageParams: { offset: 8 },
+            ttl: 6
+        });
     } else {
-        state.overlays.push({ type: "greenwave", text: "绿波协调已关闭", ttl: 3 });
+        state.overlays.push({ type: "greenwave", messageKey: "overlay.greenwaveOff", ttl: 3 });
     }
     syncCycleFromGreens();
     applySignalSettings();
@@ -210,32 +224,38 @@ function updatePerformanceUI() {
         const vcColor = vcNum > 0.9 ? "#ef4444" : vcNum > 0.7 ? "#fb923c" : "#22c55e";
         return `
           <div class="approach-row">
-            <span class="badge">${arm}</span>
+            <span class="badge">${getDirectionLabel(arm)}</span>
             <div class="bar"><span style="width:${width}%"></span></div>
             <span class="mono">${formatMeters(q)}</span>
-            <span class="mono" style="color:${vcColor}">v/c ${vc}</span>
+            <span class="mono" style="color:${vcColor}">${t("approach.vc", { value: vc })}</span>
           </div>`;
     }).join("");
 
     // 教学标注告警
     const alerts = [];
     if (los.grade === "E" || los.grade === "F") {
-        alerts.push({ cls: "danger", text: `严重拥堵: 平均延误 ${avgDelay.toFixed(1)} s/辆，LOS ${los.grade}` });
+        alerts.push({
+            cls: "danger",
+            text: t("alert.severeCongestion", { delay: avgDelay.toFixed(1), grade: los.grade })
+        });
     }
     const highVC = DIRS.find(arm => state.armFlow[arm] / CONFIG.satFlowPerLane > 0.9);
     if (highVC) {
-        alerts.push({ cls: "warn", text: `${highVC} 进口 v/c > 0.9，接近过饱和，队列将持续增长` });
+        alerts.push({ cls: "warn", text: t("alert.highVC", { arm: getDirectionLabel(highVC) }) });
     }
     const spill = DIRS.find(arm => state.queueDetectors[arm].spillback);
     if (spill) {
-        alerts.push({ cls: "danger", text: `⚠ ${spill} 进口排队溢出，干扰上游路段` });
+        alerts.push({ cls: "danger", text: t("alert.spillback", { arm: getDirectionLabel(spill) }) });
     }
     if (ui.showSat.checked && state.performance.getMeasuredSaturation() > 0) {
-        alerts.push({ cls: "info", text: `饱和流率实测: ${Math.round(state.performance.getMeasuredSaturation())} 辆/h/车道` });
+        alerts.push({
+            cls: "info",
+            text: t("alert.saturation", { value: Math.round(state.performance.getMeasuredSaturation()) })
+        });
     }
     const popup = state.overlays[state.overlays.length - 1];
     if (popup && ["webster", "greenwave", "overflow"].includes(popup.type)) {
-        alerts.push({ cls: popup.type === "overflow" ? "warn" : "info", text: popup.text });
+        alerts.push({ cls: popup.type === "overflow" ? "warn" : "info", text: getOverlayText(popup) });
     }
     ui.alerts.innerHTML = alerts.slice(0, 4)
         .map(a => `<div class="alert ${a.cls}">${a.text}</div>`).join("");
@@ -250,6 +270,7 @@ function updateUI() {
     ui.desiredSpeedValue.textContent = ui.desiredSpeed.value;
     ui.headwayValue.textContent     = ui.headway.value;
     ui.green.forEach((el, idx) => { ui.greenValue[idx].textContent = el.value; });
+    ui.btnSpeedLabel.textContent    = formatSpeedButtonLabel(CONFIG.timeWarp);
 }
 
 // ── 画布尺寸自适应 ─────────────────────────────────────────────────────────────
@@ -306,7 +327,10 @@ function bindUI() {
     ui.btnReset.addEventListener("click", resetSimulation);
     ui.btnSpeed.addEventListener("click", () => {
         CONFIG.timeWarp = CONFIG.timeWarp === 1 ? 2 : CONFIG.timeWarp === 2 ? 4 : 1;
-        ui.btnSpeed.textContent = `⚡${CONFIG.timeWarp}x`;
+        updateUI();
+    });
+    ui.btnLang.addEventListener("click", () => {
+        setLanguage(getCurrentLanguage() === "zh" ? "en" : "zh");
     });
     ui.btnWebster.addEventListener("click",  runWebsterOptimization);
     ui.btnOversat.addEventListener("click",  setOversaturatedDemo);
@@ -337,6 +361,7 @@ function frame(ts) {
 
 resizeCanvas();
 bindUI();
+setLanguage(getCurrentLanguage());
 updateUI();
 resetSimulation();
 requestAnimationFrame(frame);

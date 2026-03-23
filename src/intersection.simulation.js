@@ -80,7 +80,12 @@ function spawnVehicle(arm, turn) {
     const key = laneId(arm, turn);
     const laneVehicles = state.lanes[key];
     if (laneVehicles.length >= CONFIG.maxVehiclesPerLane) {
-        state.overlays.push({ type: "overflow", text: `${arm} 进口排队溢出`, ttl: 3.5 });
+        state.overlays.push({
+            type: "overflow",
+            messageKey: "overlay.overflow",
+            messageParams: { arm },
+            ttl: 3.5
+        });
         return;
     }
     const first = laneVehicles[0];

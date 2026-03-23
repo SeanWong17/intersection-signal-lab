@@ -82,6 +82,13 @@ canvas {
     padding-bottom: 4px;
 }
 
+.panel-header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .panel-title {
     display:     flex;
     align-items: center;
@@ -114,6 +121,10 @@ canvas {
 button {
     border:        none;
     border-radius: var(--radius-btn);
+    display:       inline-flex;
+    align-items:   center;
+    justify-content: center;
+    gap:           6px;
     font-family:   inherit;
     font-size:     .8rem;
     font-weight:   700;
@@ -122,6 +133,16 @@ button {
     transition:    transform .14s, filter .14s, opacity .14s;
     padding:       9px 6px;
     line-height:   1.2;
+}
+
+.btn-icon {
+    line-height: 1;
+}
+
+.btn-lang {
+    min-width: 58px;
+    padding: 7px 10px;
+    font-size: .76rem;
 }
 
 button:hover  { transform: translateY(-1px); filter: brightness(1.08); }

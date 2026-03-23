@@ -277,7 +277,7 @@ function drawGreenWaveGuides() {
         // 标注文字
         ctx.fillStyle = "rgba(125,211,252,0.9)";
         ctx.font      = "12px sans-serif";
-        ctx.fillText(`理想到达 ${Math.round(ui.offset.value)}s`,
+        ctx.fillText(t("canvas.idealArrival", { offset: Math.round(ui.offset.value) }),
                      line.point.x - dir.x * 72, line.point.y - dir.y * 50);
         ctx.restore();
     }
@@ -291,9 +291,12 @@ function drawEducationLabels() {
     ctx.textAlign = "left";
     let y = 34;
     const lines = [
-        `仿真时钟 ${state.simTime.toFixed(1)} s`,
-        `当前相位 ${PHASES[state.signal.phaseIndex].label}  ${state.signal.stage.toUpperCase()}`,
-        `在线车辆 ${state.vehicles.length}`,
+        t("canvas.simClock", { time: state.simTime.toFixed(1) }),
+        t("canvas.currentPhase", {
+            phase: getPhaseLabel(PHASES[state.signal.phaseIndex].arm),
+            stage: getSignalStageLabel(state.signal.stage)
+        }),
+        t("canvas.onlineVehicles", { count: state.vehicles.length })
     ];
     ctx.fillStyle = "rgba(220,232,252,0.9)";
     for (const line of lines) {
@@ -305,7 +308,10 @@ function drawEducationLabels() {
     for (const arm of DIRS) {
         const stop = geometry.stopLines[laneId(arm, "straight")].point;
         ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#cbd5e1";
-        ctx.fillText(`${arm}: ${formatMeters(state.queueDetectors[arm].currentQueue)}`,
+        ctx.fillText(t("canvas.queueLabel", {
+            arm: getDirectionLabel(arm),
+            queue: formatMeters(state.queueDetectors[arm].currentQueue)
+        }),
                      stop.x + 14, stop.y - 12);
     }
 
@@ -313,7 +319,9 @@ function drawEducationLabels() {
     if (ui.showSat.checked) {
         const nStop = geometry.stopLines[laneId("N", "straight")].point;
         ctx.fillStyle = "#86efac";
-        ctx.fillText(`s≈${Math.round(state.performance.getMeasuredSaturation())} 辆/h`,
+        ctx.fillText(t("canvas.saturation", {
+            value: Math.round(state.performance.getMeasuredSaturation())
+        }),
                      nStop.x + 32, nStop.y + 18);
     }
     ctx.restore();
@@ -331,7 +339,7 @@ function drawEducationLabels() {
     ctx.stroke();
     ctx.fillStyle = "#e6edf8";
     ctx.font      = "14px sans-serif";
-    ctx.fillText(overlay.text, 40, canvas.height - 62);
+    ctx.fillText(getOverlayText(overlay), 40, canvas.height - 62);
     ctx.restore();
 }
 
@@ -358,7 +366,7 @@ function drawSpaceTimeWindow() {
 
     ctx.fillStyle = "#94a3b8";
     ctx.font      = "11px sans-serif";
-    ctx.fillText("北进口时空图", x + 12, y + 17);
+    ctx.fillText(t("canvas.spaceTimeTitle"), x + 12, y + 17);
 
     const pad = 14, lpad = 22;
     const gx  = x + lpad;
@@ -400,11 +408,11 @@ function drawSpaceTimeWindow() {
     ctx.fillStyle = "#64748b";
     ctx.font      = "9px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("时间 →", gx + gw - 20, gy + gh + 11);
+    ctx.fillText(t("canvas.timeAxis"), gx + gw - 20, gy + gh + 11);
     ctx.save();
     ctx.translate(gx - 10, gy + gh / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText("距入口", 0, 0);
+    ctx.fillText(t("canvas.distanceAxis"), 0, 0);
     ctx.restore();
 
     ctx.restore();

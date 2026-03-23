@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>十字路口交通仿真系统</title>
-    <link rel="stylesheet" href="./intersection.css">
+    <link rel="stylesheet" href="./src/intersection.css">
 </head>
 <body>
 
@@ -18,40 +18,43 @@
 
         <!-- 标题 -->
         <header class="panel-header">
-            <div class="panel-title">
-                <span class="panel-icon">🚦</span>
-                <span>十字路口信号控制仿真</span>
+            <div class="panel-header-top">
+                <div class="panel-title">
+                    <span class="panel-icon">🚦</span>
+                    <span id="panelTitle">十字路口信号控制仿真</span>
+                </div>
+                <button id="btnLang" class="btn-ghost btn-lang" title="Switch language">EN</button>
             </div>
-            <p class="intro">四相位保护左转 · IDM 跟驰 · Webster 优化 · 过饱和与绿波演示</p>
+            <p id="panelIntro" class="intro">四相位保护左转 · IDM 跟驰 · Webster 优化 · 过饱和与绿波演示</p>
         </header>
 
         <!-- 播放控制条 -->
         <div class="toolbar">
-            <button id="btnRun"   class="btn-primary" title="运行">▶ 运行</button>
-            <button id="btnPause" class="btn-ghost"   title="暂停">⏸ 暂停</button>
-            <button id="btnReset" class="btn-ghost"   title="重置">↺ 重置</button>
-            <button id="btnSpeed" class="btn-accent"  title="切换倍速">⚡1x</button>
+            <button id="btnRun"   class="btn-primary" title="运行"><span class="btn-icon">▶</span><span id="btnRunLabel">运行</span></button>
+            <button id="btnPause" class="btn-ghost"   title="暂停"><span class="btn-icon">⏸</span><span id="btnPauseLabel">暂停</span></button>
+            <button id="btnReset" class="btn-ghost"   title="重置"><span class="btn-icon">↺</span><span id="btnResetLabel">重置</span></button>
+            <button id="btnSpeed" class="btn-accent"  title="切换倍速"><span class="btn-icon">⚡</span><span id="btnSpeedLabel">1x</span></button>
         </div>
 
         <!-- ── 实时指标卡片 ─────────────────────────────────────── -->
         <section class="card metrics-card">
-            <div class="card-header">实时指标</div>
+            <div id="metricsHeader" class="card-header">实时指标</div>
             <div class="metrics-grid">
                 <div class="metric-cell metric-los">
                     <div id="losDisplay" class="metric-value los-value">—</div>
-                    <div class="metric-label">LOS 服务水平</div>
+                    <div id="losMetricLabel" class="metric-label">LOS 服务水平</div>
                 </div>
                 <div class="metric-cell">
                     <div id="delayDisplay" class="metric-value">—</div>
-                    <div class="metric-label">平均延误 s/辆</div>
+                    <div id="delayMetricLabel" class="metric-label">平均延误 s/辆</div>
                 </div>
                 <div class="metric-cell">
                     <div id="throughputDisplay" class="metric-value">0</div>
-                    <div class="metric-label">通行量 辆/h</div>
+                    <div id="throughputMetricLabel" class="metric-label">通行量 辆/h</div>
                 </div>
                 <div class="metric-cell">
                     <div id="saturationDisplay" class="metric-value">0</div>
-                    <div class="metric-label">实测饱和流率</div>
+                    <div id="saturationMetricLabel" class="metric-label">实测饱和流率</div>
                 </div>
             </div>
 
@@ -62,27 +65,27 @@
         <!-- ── 流量控制 ──────────────────────────────────────────── -->
         <section class="card">
             <div class="card-header">
-                <span>流量控制</span>
-                <span class="card-hint">辆/h</span>
+                <span id="flowHeader">流量控制</span>
+                <span id="flowHint" class="card-hint">辆/h</span>
             </div>
             <div class="slider-group">
                 <div class="slider-row">
-                    <span class="dir-badge dir-n">北</span>
+                    <span id="flowNorthLabel" class="dir-badge dir-n">北</span>
                     <input id="flowNorth" type="range" min="200" max="1800" step="50" value="800">
                     <span id="flowNorthValue" class="slider-val">800</span>
                 </div>
                 <div class="slider-row">
-                    <span class="dir-badge dir-e">东</span>
+                    <span id="flowEastLabel" class="dir-badge dir-e">东</span>
                     <input id="flowEast"  type="range" min="200" max="1800" step="50" value="600">
                     <span id="flowEastValue"  class="slider-val">600</span>
                 </div>
                 <div class="slider-row">
-                    <span class="dir-badge dir-s">南</span>
+                    <span id="flowSouthLabel" class="dir-badge dir-s">南</span>
                     <input id="flowSouth" type="range" min="200" max="1800" step="50" value="800">
                     <span id="flowSouthValue" class="slider-val">800</span>
                 </div>
                 <div class="slider-row">
-                    <span class="dir-badge dir-w">西</span>
+                    <span id="flowWestLabel" class="dir-badge dir-w">西</span>
                     <input id="flowWest"  type="range" min="200" max="1800" step="50" value="400">
                     <span id="flowWestValue"  class="slider-val">400</span>
                 </div>
@@ -92,39 +95,39 @@
         <!-- ── 信号配时 ──────────────────────────────────────────── -->
         <section class="card">
             <div class="card-header">
-                <span>信号配时</span>
-                <button id="btnWebster" class="btn-inline">✦ Webster 优化</button>
+                <span id="signalHeader">信号配时</span>
+                <button id="btnWebster" class="btn-inline"><span class="btn-icon">✦</span><span id="btnWebsterLabel">Webster 优化</span></button>
             </div>
             <div class="slider-group">
                 <div class="slider-row">
-                    <span class="label-text">周期</span>
+                    <span id="cycleLabel" class="label-text">周期</span>
                     <input id="cycleLength" type="range" min="40" max="120" step="1" value="80">
                     <span id="cycleValue" class="slider-val">80</span><span class="unit">s</span>
                 </div>
                 <div class="phase-grid">
                     <div class="phase-row">
-                        <span class="phase-tag">北</span>
+                        <span id="phaseNorthLabel" class="phase-tag">北</span>
                         <input id="green0" type="range" min="8" max="45" step="1" value="16">
                         <span id="green0Value" class="slider-val">16</span><span class="unit">s</span>
                     </div>
                     <div class="phase-row">
-                        <span class="phase-tag">南</span>
+                        <span id="phaseSouthLabel" class="phase-tag">南</span>
                         <input id="green1" type="range" min="8" max="45" step="1" value="16">
                         <span id="green1Value" class="slider-val">16</span><span class="unit">s</span>
                     </div>
                     <div class="phase-row">
-                        <span class="phase-tag">东</span>
+                        <span id="phaseEastLabel" class="phase-tag">东</span>
                         <input id="green2" type="range" min="8" max="45" step="1" value="16">
                         <span id="green2Value" class="slider-val">16</span><span class="unit">s</span>
                     </div>
                     <div class="phase-row">
-                        <span class="phase-tag">西</span>
+                        <span id="phaseWestLabel" class="phase-tag">西</span>
                         <input id="green3" type="range" min="8" max="45" step="1" value="16">
                         <span id="green3Value" class="slider-val">16</span><span class="unit">s</span>
                     </div>
                 </div>
                 <div class="slider-row">
-                    <span class="label-text">相位差</span>
+                    <span id="offsetLabel" class="label-text">相位差</span>
                     <input id="offset" type="range" min="0" max="20" step="1" value="0">
                     <span id="offsetValue" class="slider-val">0</span><span class="unit">s</span>
                 </div>
@@ -133,15 +136,15 @@
 
         <!-- ── IDM 参数 ──────────────────────────────────────────── -->
         <section class="card">
-            <div class="card-header">IDM 跟驰参数</div>
+            <div id="idmHeader" class="card-header">IDM 跟驰参数</div>
             <div class="slider-group">
                 <div class="slider-row">
-                    <span class="label-text">期望速度</span>
+                    <span id="desiredSpeedText" class="label-text">期望速度</span>
                     <input id="desiredSpeed" type="range" min="30" max="70" step="1" value="50">
                     <span id="desiredSpeedValue" class="slider-val">50</span><span class="unit">km/h</span>
                 </div>
                 <div class="slider-row">
-                    <span class="label-text">车头时距 T</span>
+                    <span id="headwayText" class="label-text">车头时距 T</span>
                     <input id="headway" type="range" min="0.8" max="2.6" step="0.1" value="1.5">
                     <span id="headwayValue" class="slider-val">1.5</span><span class="unit">s</span>
                 </div>
@@ -150,45 +153,46 @@
 
         <!-- ── 教育演示 ──────────────────────────────────────────── -->
         <section class="card">
-            <div class="card-header">教育演示</div>
+            <div id="demoHeader" class="card-header">教育演示</div>
             <div class="demo-buttons">
-                <button id="btnOversat"  class="btn-danger">⚠ 过饱和</button>
-                <button id="btnGreenWave" class="btn-warn">🌊 绿波协调</button>
+                <button id="btnOversat"  class="btn-danger"><span class="btn-icon">⚠</span><span id="btnOversatLabel">过饱和</span></button>
+                <button id="btnGreenWave" class="btn-warn"><span class="btn-icon">🌊</span><span id="btnGreenWaveLabel">绿波协调</span></button>
             </div>
             <div class="toggle-group">
                 <label class="toggle-row">
                     <input id="showQueue"     type="checkbox" checked>
                     <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                    <span>排队波可视化</span>
+                    <span id="showQueueLabel">排队波可视化</span>
                 </label>
                 <label class="toggle-row">
                     <input id="showSat"       type="checkbox" checked>
                     <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                    <span>饱和流率标注</span>
+                    <span id="showSatLabel">饱和流率标注</span>
                 </label>
                 <label class="toggle-row">
                     <input id="showSpaceTime" type="checkbox" checked>
                     <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                    <span>时空图（北进口）</span>
+                    <span id="showSpaceTimeLabel">时空图（北进口）</span>
                 </label>
             </div>
-            <p class="hint-text">理论饱和流率 1800 辆/h/车道。时空图斜率反映消散波速，绿色背景为绿灯窗口。</p>
+            <p id="demoHint" class="hint-text">理论饱和流率 1800 辆/h/车道。时空图斜率反映消散波速，绿色背景为绿灯窗口。</p>
         </section>
 
         <!-- ── 教学标注告警 ───────────────────────────────────────── -->
         <section class="card alerts-card">
-            <div class="card-header">教学标注</div>
+            <div id="alertsHeader" class="card-header">教学标注</div>
             <div id="alerts" class="alerts-list"></div>
         </section>
 
     </aside>
 
     <!-- 脚本：按依赖顺序加载 -->
-    <script src="./intersection.config.js"></script>
-    <script src="./intersection.geometry.js"></script>
-    <script src="./intersection.models.js"></script>
-    <script src="./intersection.simulation.js"></script>
-    <script src="./intersection.render.js"></script>
-    <script src="./intersection.ui.js"></script>
+    <script src="./src/intersection.config.js"></script>
+    <script src="./src/intersection.i18n.js"></script>
+    <script src="./src/intersection.geometry.js"></script>
+    <script src="./src/intersection.models.js"></script>
+    <script src="./src/intersection.simulation.js"></script>
+    <script src="./src/intersection.render.js"></script>
+    <script src="./src/intersection.ui.js"></script>
 </body>
 </html>
