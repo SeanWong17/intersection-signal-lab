@@ -2,7 +2,6 @@ const canvas = document.getElementById("simCanvas");
         const ctx = canvas.getContext("2d");
 
         const DIRS = ["N", "E", "S", "W"];
-        const DIR_INDEX = { N: 0, E: 1, S: 2, W: 3 };
         const DIR_VECTORS = {
             N: { x: 0, y: 1 },
             E: { x: -1, y: 0 },
@@ -234,7 +233,7 @@ const canvas = document.getElementById("simCanvas");
 
             for (const arm of DIRS) {
                 for (const turn of ["left", "straight", "right"]) {
-                    geometry.pathCache[`${arm}-${turn}`] = buildCrossingPath(arm, turn);
+                    geometry.pathCache[laneId(arm, turn)] = buildCrossingPath(arm, turn);
                 }
             }
         }
@@ -284,7 +283,7 @@ const canvas = document.getElementById("simCanvas");
             const start = geometry.stopLines[laneId(arm, turn === "right" ? "right" : turn)].point;
             const exitArm = TURN_TO_EXIT[arm][turn];
             const exitGeo = geometry.arms[exitArm];
-            const exitLane = turn === "left" ? "straight" : "straight";
+            const exitLane = "straight";
             const end = {
                 x: exitGeo.outboundNear.x + exitGeo.side.x * exitGeo.laneOffsets[exitLane],
                 y: exitGeo.outboundNear.y + exitGeo.side.y * exitGeo.laneOffsets[exitLane]
@@ -367,17 +366,12 @@ const canvas = document.getElementById("simCanvas");
                 this.a = clamp(randn(baseParams.a, 0.15), 0.7, 2.0);
                 this.b = clamp(randn(baseParams.b, 0.18), 1.5, 3.0);
                 this.s0 = clamp(randn(baseParams.s0, 0.2), 1.5, 3.5);
-                this.crossingPath = geometry.pathCache[`${arm}-${turnIntent}`];
+                this.crossingPath = geometry.pathCache[laneId(arm, turnIntent)];
                 this.crossingT = 0;
                 this.crossingDistance = 0;
                 this.arrivalTime = null;
                 this.departureTime = null;
                 this.spawnTime = spawnTime;
-                this.delay = 0;
-                this.stopCount = 0;
-                this.wasStopped = false;
-                this.queueJoinTime = null;
-                this.lastSignalClearTime = null;
             }
 
             get laneKey() {
@@ -532,7 +526,6 @@ const canvas = document.getElementById("simCanvas");
                 const freeFlowTime = (CONFIG.approachLengthM + CONFIG.exitLengthM + vehicle.crossingPath.lengthMeters) / Math.max(vehicle.v0, 1);
                 const actual = simTime - vehicle.spawnTime;
                 const delay = Math.max(0, actual - freeFlowTime);
-                vehicle.delay = delay;
                 this.delaySamples.push(delay);
                 if (this.delaySamples.length > 600) this.delaySamples.shift();
                 this.departed.push({ t: simTime, arm: vehicle.arm, delay });
@@ -623,6 +616,8 @@ const canvas = document.getElementById("simCanvas");
             state.crossingReservations = [];
             state.overlays = [];
             state.spaceTime = [];
+            state.demo.oversat = false;
+            state.demo.greenWave = false;
             state.performance = new PerformanceMonitor();
             for (const arm of DIRS) {
                 state.queueDetectors[arm] = new QueueDetector(arm);
@@ -713,13 +708,6 @@ const canvas = document.getElementById("simCanvas");
             vehicle.acc = acc;
             vehicle.vel = Math.max(0, vehicle.vel + acc * dt);
             vehicle.pos += (prevV + vehicle.vel) * 0.5 * dt;
-            if (vehicle.vel < 0.2 && !vehicle.wasStopped) {
-                vehicle.stopCount += 1;
-                vehicle.wasStopped = true;
-            }
-            if (vehicle.vel > 0.5) {
-                vehicle.wasStopped = false;
-            }
         }
 
         function conflictZoneForTurn(turn) {
@@ -768,7 +756,7 @@ const canvas = document.getElementById("simCanvas");
                         if (state.signal.isLanePermitted(vehicle) && canEnterIntersection(vehicle)) {
                             vehicle.segment = "crossing";
                             vehicle.crossingDistance = 0;
-                            vehicle.vel = Math.min(Math.max(vehicle.vel, 3), CONFIG.crossingSpeed);
+                            vehicle.vel = clamp(vehicle.vel, 3, CONFIG.crossingSpeed);
                             reserveIntersection(vehicle);
                         } else {
                             vehicle.pos = CONFIG.approachLengthM - 0.1;
@@ -809,7 +797,7 @@ const canvas = document.getElementById("simCanvas");
             state.vehicles = state.vehicles.filter(v => v.segment !== "departed");
             state.crossingReservations = state.crossingReservations.filter(r => r.leaveAt > state.simTime);
             state.overlays = state.overlays.filter(o => {
-                o.ttl -= CONFIG.dt * CONFIG.timeWarp;
+                o.ttl -= CONFIG.dt;
                 return o.ttl > 0;
             });
         }
@@ -842,27 +830,23 @@ const canvas = document.getElementById("simCanvas");
             state.signal.applyLaneStates();
         }
 
+        function setSlider(input, display, value) {
+            input.value = value;
+            display.textContent = value;
+        }
+
         function runWebsterOptimization() {
             const L = 4 * PHASES.length;
-            const saturation = CONFIG.satFlowPerLane;
-            const criticalFlows = [
-                state.armFlow.N * (state.laneShares.left + state.laneShares.straight),
-                state.armFlow.S * (state.laneShares.left + state.laneShares.straight),
-                state.armFlow.E * (state.laneShares.left + state.laneShares.straight),
-                state.armFlow.W * (state.laneShares.left + state.laneShares.straight)
-            ];
-            const Y = criticalFlows.map(q => q / saturation);
+            const throughputShare = state.laneShares.left + state.laneShares.straight;
+            const criticalFlows = DIRS.map(arm => state.armFlow[arm] * throughputShare);
+            const Y = criticalFlows.map(q => q / CONFIG.satFlowPerLane);
             const Ysum = clamp(Y.reduce((a, b) => a + b, 0), 0.01, 0.92);
             const Copt = clamp(Math.ceil((1.5 * L + 5) / (1 - Ysum)), 30, 120);
             const effectiveGreen = Math.max(Copt - L, 24);
             const greens = Y.map(y => Math.max(8, Math.round((effectiveGreen * y) / Ysum)));
             const adjustedCycle = greens.reduce((a, b) => a + b, 0) + L;
-            ui.cycle.value = adjustedCycle;
-            ui.cycleValue.textContent = adjustedCycle;
-            greens.forEach((g, idx) => {
-                ui.green[idx].value = g;
-                ui.greenValue[idx].textContent = g;
-            });
+            setSlider(ui.cycle, ui.cycleValue, adjustedCycle);
+            greens.forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
             applySignalSettings();
             state.overlays.push({
                 type: "webster",
@@ -876,15 +860,10 @@ const canvas = document.getElementById("simCanvas");
             const flows = { N: 1700, E: 1500, S: 1700, W: 1400 };
             for (const arm of DIRS) {
                 state.armFlow[arm] = flows[arm];
-                ui.flow[arm].value = flows[arm];
-                ui.flowValue[arm].textContent = flows[arm];
+                setSlider(ui.flow[arm], ui.flowValue[arm], flows[arm]);
             }
-            ui.cycle.value = 110;
-            ui.cycleValue.textContent = 110;
-            [18, 18, 16, 16].forEach((g, idx) => {
-                ui.green[idx].value = g;
-                ui.greenValue[idx].textContent = g;
-            });
+            setSlider(ui.cycle, ui.cycleValue, 110);
+            [18, 18, 16, 16].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
             applySignalSettings();
             state.overlays.push({ type: "overflow", text: "过饱和场景已加载: v/c > 1", ttl: 5 });
         }
@@ -892,21 +871,14 @@ const canvas = document.getElementById("simCanvas");
         function setGreenWaveDemo() {
             state.demo.greenWave = !state.demo.greenWave;
             const offset = state.demo.greenWave ? 8 : 0;
-            ui.offset.value = offset;
-            ui.offsetValue.textContent = offset;
+            setSlider(ui.offset, ui.offsetValue, offset);
             if (state.demo.greenWave) {
                 state.armFlow.N = 900;
                 state.armFlow.S = 900;
-                ui.flow.N.value = 900;
-                ui.flow.S.value = 900;
-                ui.flowValue.N.textContent = 900;
-                ui.flowValue.S.textContent = 900;
-                [22, 22, 12, 12].forEach((g, idx) => {
-                    ui.green[idx].value = g;
-                    ui.greenValue[idx].textContent = g;
-                });
-                ui.cycle.value = 84;
-                ui.cycleValue.textContent = 84;
+                setSlider(ui.flow.N, ui.flowValue.N, 900);
+                setSlider(ui.flow.S, ui.flowValue.S, 900);
+                [22, 22, 12, 12].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+                setSlider(ui.cycle, ui.cycleValue, 84);
                 state.overlays.push({ type: "greenwave", text: "绿波协调启用: 主走廊偏移 8s", ttl: 5 });
             } else {
                 state.overlays.push({ type: "greenwave", text: "绿波协调已关闭", ttl: 3 });
@@ -974,17 +946,7 @@ const canvas = document.getElementById("simCanvas");
             });
         }
 
-        function syncModelFromUI() {
-            for (const arm of DIRS) {
-                state.armFlow[arm] = parseFloat(ui.flow[arm].value);
-            }
-            state.baseVehicleParams.v0 = parseFloat(ui.desiredSpeed.value) / 3.6;
-            state.baseVehicleParams.T = parseFloat(ui.headway.value);
-            applySignalSettings();
-        }
-
-        function stepSimulation(dt) {
-            syncModelFromUI();
+function stepSimulation(dt) {
             generateArrivals();
             rebuildLaneBuckets();
             state.signal.update(dt);
@@ -995,7 +957,6 @@ const canvas = document.getElementById("simCanvas");
             updateQueues();
             updateSpaceTime();
             state.simTime += dt;
-            updatePerformanceUI();
         }
 
         function drawBackground() {
@@ -1172,7 +1133,6 @@ const canvas = document.getElementById("simCanvas");
         function drawVehicles() {
             const ordered = state.vehicles
                 .filter(v => v.segment !== "departed")
-                .slice()
                 .sort((a, b) => {
                     const layerA = a.segment === "crossing" ? 2 : a.segment === "inbound" ? 1 : 0;
                     const layerB = b.segment === "crossing" ? 2 : b.segment === "inbound" ? 1 : 0;
@@ -1250,11 +1210,11 @@ const canvas = document.getElementById("simCanvas");
             for (const arm of DIRS) {
                 const stop = geometry.stopLines[laneId(arm, "straight")].point;
                 ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#e5e7eb";
-                ctx.fillText(`${arm}: ${Math.round(state.queueDetectors[arm].currentQueue)}m`, stop.x + 14, stop.y - 12);
+                ctx.fillText(`${arm}: ${formatMeters(state.queueDetectors[arm].currentQueue)}`, stop.x + 14, stop.y - 12);
             }
 
             if (ui.showSat.checked) {
-                const nStop = geometry.stopLines["N-straight"].point;
+                const nStop = geometry.stopLines[laneId("N", "straight")].point;
                 ctx.fillStyle = "#86efac";
                 ctx.fillText(`s≈${Math.round(state.performance.getMeasuredSaturation())} 辆/h`, nStop.x + 32, nStop.y + 18);
             }
@@ -1342,8 +1302,9 @@ const canvas = document.getElementById("simCanvas");
 
         function estimateNorthGreenWindows(startTime, endTime) {
             const windows = [];
-            const green = state.signal.greenTimes[0];
-            const cycle = state.signal.greenTimes.reduce((a, b) => a + b, 0) + CONFIG.yellowTime * 4 + CONFIG.allRedTime * 4;
+            const phaseIdx = PHASES.findIndex(p => p.arm === "N");
+            const green = state.signal.greenTimes[phaseIdx];
+            const cycle = state.signal.cycleLength;
             let t = -cycle * 2;
             while (t < endTime + cycle) {
                 const start = t;
@@ -1387,6 +1348,7 @@ const canvas = document.getElementById("simCanvas");
                     stepSimulation(CONFIG.dt);
                     state.accumulator -= CONFIG.dt;
                 }
+                updatePerformanceUI();
             }
             draw();
             requestAnimationFrame(frame);
@@ -1408,8 +1370,12 @@ const canvas = document.getElementById("simCanvas");
             bindRange(ui.cycle, applySignalSettings);
             bindRange(ui.offset, applySignalSettings);
             ui.green.forEach(el => bindRange(el, applySignalSettings));
-            bindRange(ui.desiredSpeed);
-            bindRange(ui.headway);
+            bindRange(ui.desiredSpeed, () => {
+                state.baseVehicleParams.v0 = parseFloat(ui.desiredSpeed.value) / 3.6;
+            });
+            bindRange(ui.headway, () => {
+                state.baseVehicleParams.T = parseFloat(ui.headway.value);
+            });
 
             ui.btnRun.addEventListener("click", () => { state.running = true; });
             ui.btnPause.addEventListener("click", () => { state.running = false; });

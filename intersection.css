@@ -1,276 +1,493 @@
+/* ─── 十字路口交通仿真系统 · 样式表 ──────────────────────────────────────────── */
+
+/* ── 设计令牌 ──────────────────────────────────────────────────────────────── */
+
 :root {
-            --bg: #1a1a2e;
-            --panel: rgba(19, 25, 39, 0.94);
-            --panel-border: #33415f;
-            --text: #e6edf8;
-            --muted: #9ca8c3;
-            --accent: #7dd3fc;
-            --accent-2: #38bdf8;
-            --danger: #ff6b6b;
-            --warning: #f59e0b;
-            --success: #34d399;
-            --road: #3b4252;
-            --road-edge: #525f73;
-            --line: #f8fafc;
-            --yellow-line: #fbbf24;
-        }
+    --bg:            #0f172a;
+    --panel:         rgba(15, 22, 38, 0.96);
+    --panel-border:  rgba(51, 65, 95, 0.7);
+    --card-bg:       rgba(255, 255, 255, 0.042);
+    --card-border:   rgba(148, 163, 184, 0.11);
+    --text:          #e2e8f8;
+    --muted:         #8898b8;
+    --accent:        #7dd3fc;
+    --accent-2:      #38bdf8;
+    --success:       #22c55e;
+    --warning:       #fb923c;
+    --danger:        #ef4444;
+    --radius-card:   14px;
+    --radius-btn:    10px;
+    --panel-w:       320px;
+    --gap:           10px;
+}
 
-        * {
-            box-sizing: border-box;
-        }
+/* ── 重置 ──────────────────────────────────────────────────────────────────── */
 
-        body {
-            margin: 0;
-            overflow: hidden;
-            background:
-                radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 28%),
-                radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 35%),
-                linear-gradient(135deg, #111827, #1a1a2e 45%, #0f172a);
-            color: var(--text);
-            font-family: "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
-            display: flex;
-            height: 100vh;
-        }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        #canvas-wrap {
-            flex: 1;
-            position: relative;
-            min-width: 0;
-        }
+/* ── 全局 ──────────────────────────────────────────────────────────────────── */
 
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            background: transparent;
-        }
+body {
+    display:     flex;
+    height:      100vh;
+    overflow:    hidden;
+    background:
+        radial-gradient(circle at 18% 12%, rgba(56,189,248,.09) 0%, transparent 30%),
+        radial-gradient(circle at 82% 88%, rgba(14,165,233,.12) 0%, transparent 32%),
+        linear-gradient(135deg, #111827 0%, #1a1a2e 48%, #0f172a 100%);
+    color:       var(--text);
+    font-family: "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    font-size:   14px;
+    line-height: 1.4;
+}
 
-        #controls {
-            width: 320px;
-            padding: 18px 16px 24px;
-            overflow-y: auto;
-            background: var(--panel);
-            border-left: 1px solid var(--panel-border);
-            box-shadow: -12px 0 28px rgba(0, 0, 0, 0.28);
-            backdrop-filter: blur(8px);
-        }
+/* ── 画布区域 ──────────────────────────────────────────────────────────────── */
 
-        h1 {
-            margin: 0 0 10px;
-            font-size: 1.24rem;
-            color: var(--accent);
-            letter-spacing: 0.03em;
-        }
+#canvas-wrap {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
 
-        h2 {
-            margin: 0 0 8px;
-            font-size: 0.92rem;
-            color: #bfd6ff;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
+canvas {
+    display: block;
+    width:   100%;
+    height:  100%;
+}
 
-        .intro {
-            margin-bottom: 12px;
-            color: var(--muted);
-            font-size: 0.82rem;
-            line-height: 1.45;
-        }
+/* ── 控制面板容器 ──────────────────────────────────────────────────────────── */
 
-        .toolbar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-bottom: 14px;
-        }
+#controls {
+    width:          var(--panel-w);
+    display:        flex;
+    flex-direction: column;
+    gap:            var(--gap);
+    padding:        16px 14px 20px;
+    overflow-y:     auto;
+    overflow-x:     hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(125,211,252,.25) transparent;
+    background:     var(--panel);
+    border-left:    1px solid var(--panel-border);
+    box-shadow:     -14px 0 32px rgba(0,0,0,.32);
+    backdrop-filter: blur(10px);
+}
 
-        button {
-            border: 1px solid transparent;
-            background: linear-gradient(180deg, rgba(125, 211, 252, 0.9), rgba(56, 189, 248, 0.85));
-            color: #04131f;
-            padding: 10px 8px;
-            border-radius: 10px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
-        }
+#controls::-webkit-scrollbar       { width: 4px; }
+#controls::-webkit-scrollbar-thumb { background: rgba(125,211,252,.28); border-radius: 99px; }
 
-        button:hover {
-            transform: translateY(-1px);
-            filter: brightness(1.06);
-        }
+/* ── 面板标题头 ────────────────────────────────────────────────────────────── */
 
-        button.secondary {
-            background: rgba(148, 163, 184, 0.16);
-            color: var(--text);
-            border-color: rgba(148, 163, 184, 0.2);
-        }
+.panel-header {
+    padding-bottom: 4px;
+}
 
-        button.warn {
-            background: linear-gradient(180deg, rgba(251, 191, 36, 0.95), rgba(245, 158, 11, 0.85));
-            color: #291904;
-        }
+.panel-title {
+    display:     flex;
+    align-items: center;
+    gap:         8px;
+    font-size:   1.08rem;
+    font-weight: 700;
+    color:       var(--accent);
+    letter-spacing: .02em;
+    margin-bottom: 5px;
+}
 
-        button.danger {
-            background: linear-gradient(180deg, rgba(248, 113, 113, 0.96), rgba(239, 68, 68, 0.82));
-            color: #fff7f7;
-        }
+.panel-icon { font-size: 1.3rem; line-height: 1; }
 
-        .section {
-            background: rgba(255, 255, 255, 0.045);
-            border: 1px solid rgba(148, 163, 184, 0.12);
-            border-radius: 14px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
+.intro {
+    font-size:   .76rem;
+    color:       var(--muted);
+    line-height: 1.5;
+}
 
-        .field {
-            margin-bottom: 10px;
-        }
+/* ── 工具栏按钮行 ──────────────────────────────────────────────────────────── */
 
-        .field:last-child {
-            margin-bottom: 0;
-        }
+.toolbar {
+    display:               grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:                   7px;
+}
 
-        label {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-            font-size: 0.84rem;
-            margin-bottom: 6px;
-            color: var(--text);
-        }
+/* ── 按钮基础 ──────────────────────────────────────────────────────────────── */
 
-        .value {
-            color: var(--accent);
-            font-weight: 700;
-        }
+button {
+    border:        none;
+    border-radius: var(--radius-btn);
+    font-family:   inherit;
+    font-size:     .8rem;
+    font-weight:   700;
+    cursor:        pointer;
+    white-space:   nowrap;
+    transition:    transform .14s, filter .14s, opacity .14s;
+    padding:       9px 6px;
+    line-height:   1.2;
+}
 
-        input[type="range"] {
-            width: 100%;
-            accent-color: var(--accent-2);
-            cursor: pointer;
-        }
+button:hover  { transform: translateY(-1px); filter: brightness(1.08); }
+button:active { transform: translateY(0);    filter: brightness(.96);  }
 
-        .checkbox {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--muted);
-            font-size: 0.82rem;
-            margin: 8px 0;
-        }
+/* 主按钮 – 蓝色 */
+.btn-primary {
+    background: linear-gradient(160deg, #38bdf8, #0ea5e9);
+    color:      #041624;
+    box-shadow: 0 2px 8px rgba(14,165,233,.35);
+}
 
-        .checkbox input {
-            accent-color: var(--accent-2);
-        }
+/* 次要按钮 – 幽灵 */
+.btn-ghost {
+    background: rgba(148,163,184,.13);
+    border:     1px solid rgba(148,163,184,.2);
+    color:      var(--text);
+}
+.btn-ghost:hover { background: rgba(148,163,184,.22); }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
-        }
+/* 强调按钮 – 紫/青 */
+.btn-accent {
+    background: linear-gradient(160deg, #818cf8, #6366f1);
+    color:      #f0f0ff;
+    box-shadow: 0 2px 8px rgba(99,102,241,.34);
+}
 
-        .stat-card {
-            padding: 10px;
-            border-radius: 12px;
-            background: rgba(2, 8, 23, 0.4);
-            border: 1px solid rgba(148, 163, 184, 0.12);
-        }
+/* 危险按钮 – 红 */
+.btn-danger {
+    background: linear-gradient(160deg, #f87171, #ef4444);
+    color:      #fff6f6;
+    box-shadow: 0 2px 8px rgba(239,68,68,.3);
+}
 
-        .stat-card .big {
-            font-size: 1.15rem;
-            font-weight: 700;
-        }
+/* 警告按钮 – 橙 */
+.btn-warn {
+    background: linear-gradient(160deg, #fb923c, #f97316);
+    color:      #2a1200;
+    box-shadow: 0 2px 8px rgba(249,115,22,.3);
+}
 
-        .stat-card .small {
-            color: var(--muted);
-            font-size: 0.75rem;
-            margin-top: 2px;
-        }
+/* 内联文字按钮（出现在 card-header 右侧） */
+.btn-inline {
+    padding:       4px 10px;
+    font-size:     .74rem;
+    font-weight:   600;
+    border-radius: 8px;
+    background:    linear-gradient(160deg, rgba(56,189,248,.18), rgba(14,165,233,.12));
+    border:        1px solid rgba(56,189,248,.32);
+    color:         var(--accent);
+    box-shadow:    none;
+}
+.btn-inline:hover { background: rgba(56,189,248,.28); transform: none; filter: none; }
 
-        .approach-row {
-            display: grid;
-            grid-template-columns: 18px 1fr auto auto;
-            gap: 8px;
-            align-items: center;
-            font-size: 0.8rem;
-            margin: 8px 0;
-        }
+/* ── 卡片 ──────────────────────────────────────────────────────────────────── */
 
-        .badge {
-            width: 18px;
-            height: 18px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: rgba(125, 211, 252, 0.12);
-            color: var(--accent);
-            font-size: 0.74rem;
-            font-weight: 700;
-        }
+.card {
+    background:    var(--card-bg);
+    border:        1px solid var(--card-border);
+    border-radius: var(--radius-card);
+    padding:       12px;
+}
 
-        .bar {
-            height: 8px;
-            border-radius: 999px;
-            overflow: hidden;
-            background: rgba(148, 163, 184, 0.14);
-            position: relative;
-        }
+.card-header {
+    display:         flex;
+    justify-content: space-between;
+    align-items:     center;
+    font-size:       .78rem;
+    font-weight:     700;
+    color:           #bfd6ff;
+    letter-spacing:  .07em;
+    text-transform:  uppercase;
+    margin-bottom:   10px;
+}
 
-        .bar > span {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, #22c55e, #facc15, #ef4444);
-        }
+.card-hint {
+    font-size:      .72rem;
+    font-weight:    400;
+    text-transform: none;
+    letter-spacing: 0;
+    color:          var(--muted);
+}
 
-        #alerts {
-            min-height: 74px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+/* ── 实时指标卡 ────────────────────────────────────────────────────────────── */
 
-        .alert {
-            border-radius: 12px;
-            padding: 10px 12px;
-            font-size: 0.8rem;
-            line-height: 1.4;
-            border: 1px solid transparent;
-        }
+.metrics-card { padding-bottom: 8px; }
 
-        .alert.info {
-            background: rgba(59, 130, 246, 0.14);
-            border-color: rgba(96, 165, 250, 0.28);
-            color: #dbeafe;
-        }
+.metrics-grid {
+    display:               grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:                   6px;
+    margin-bottom:         10px;
+}
 
-        .alert.warn {
-            background: rgba(245, 158, 11, 0.16);
-            border-color: rgba(251, 191, 36, 0.32);
-            color: #fde68a;
-        }
+.metric-cell {
+    background:    rgba(2,8,23,.38);
+    border:        1px solid var(--card-border);
+    border-radius: 10px;
+    padding:       8px 5px 6px;
+    text-align:    center;
+}
 
-        .alert.danger {
-            background: rgba(239, 68, 68, 0.16);
-            border-color: rgba(248, 113, 113, 0.34);
-            color: #fecaca;
-            animation: pulse 1s infinite alternate;
-        }
+.metric-value {
+    font-size:   1.05rem;
+    font-weight: 800;
+    color:       var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+}
 
-        @keyframes pulse {
-            from { box-shadow: 0 0 0 rgba(248, 113, 113, 0.05); }
-            to { box-shadow: 0 0 18px rgba(248, 113, 113, 0.18); }
-        }
+.metric-label {
+    font-size:  .65rem;
+    color:      var(--muted);
+    line-height: 1.3;
+}
 
-        .hint {
-            margin-top: 8px;
-            color: var(--muted);
-            font-size: 0.76rem;
-            line-height: 1.45;
-        }
+/* LOS 格 – 字号稍大 */
+.metric-los .los-value {
+    font-size: 1.4rem;
+}
+
+/* ── 进口统计列表 ──────────────────────────────────────────────────────────── */
+
+.approach-list { display: flex; flex-direction: column; gap: 5px; }
+
+.approach-row {
+    display:               grid;
+    grid-template-columns: 22px 1fr 44px 58px;
+    gap:                   7px;
+    align-items:           center;
+    font-size:             .76rem;
+}
+
+.badge {
+    width:          22px;
+    height:         22px;
+    display:        inline-flex;
+    align-items:    center;
+    justify-content: center;
+    border-radius:  50%;
+    font-size:      .7rem;
+    font-weight:    700;
+    flex-shrink:    0;
+    background:     rgba(125,211,252,.12);
+    color:          var(--accent);
+}
+
+.bar {
+    height:        7px;
+    border-radius: 999px;
+    overflow:      hidden;
+    background:    rgba(148,163,184,.14);
+    position:      relative;
+}
+
+.bar > span {
+    position:   absolute;
+    inset:      0 auto 0 0;
+    background: linear-gradient(90deg, #22c55e 0%, #facc15 55%, #ef4444 100%);
+    border-radius: inherit;
+    transition: width .3s ease;
+}
+
+.mono {
+    font-family: "SF Mono", "Consolas", monospace;
+    font-size:   .73rem;
+    text-align:  right;
+}
+
+/* ── 流量/参数滑块组 ───────────────────────────────────────────────────────── */
+
+.slider-group { display: flex; flex-direction: column; gap: 8px; }
+
+.slider-row {
+    display:     grid;
+    grid-template-columns: 56px 1fr 30px auto;
+    gap:         7px;
+    align-items: center;
+    font-size:   .8rem;
+}
+
+.slider-val {
+    font-family: "SF Mono", "Consolas", monospace;
+    font-size:   .78rem;
+    font-weight: 600;
+    color:       var(--accent);
+    text-align:  right;
+}
+
+.unit {
+    font-size:  .7rem;
+    color:      var(--muted);
+    margin-left: 1px;
+}
+
+.label-text {
+    color:      var(--text);
+    font-size:  .8rem;
+}
+
+/* 方向徽章（流量行标签） */
+.dir-badge {
+    display:         inline-flex;
+    align-items:     center;
+    justify-content: center;
+    width:           24px;
+    height:          24px;
+    border-radius:   6px;
+    font-size:       .78rem;
+    font-weight:     700;
+}
+
+.dir-n { background: rgba( 56,189,248,.18); color: #7dd3fc; border: 1px solid rgba(56,189,248,.25); }
+.dir-e { background: rgba(251,191, 36,.18); color: #fde68a; border: 1px solid rgba(251,191,36,.25); }
+.dir-s { background: rgba( 52,211,153,.18); color: #6ee7b7; border: 1px solid rgba(52,211,153,.25); }
+.dir-w { background: rgba(249,115, 22,.18); color: #fdba74; border: 1px solid rgba(249,115,22,.25); }
+
+/* ── 信号相位网格 ──────────────────────────────────────────────────────────── */
+
+.phase-grid { display: flex; flex-direction: column; gap: 6px; }
+
+.phase-row {
+    display:               grid;
+    grid-template-columns: 24px 1fr 30px 22px;
+    gap:                   6px;
+    align-items:           center;
+    font-size:             .8rem;
+}
+
+.phase-tag {
+    display:         inline-flex;
+    align-items:     center;
+    justify-content: center;
+    width:           22px;
+    height:          22px;
+    border-radius:   5px;
+    font-size:       .74rem;
+    font-weight:     700;
+    background:      rgba(99,102,241,.18);
+    color:           #a5b4fc;
+    border:          1px solid rgba(99,102,241,.26);
+}
+
+/* ── 原生 range 滑块 ───────────────────────────────────────────────────────── */
+
+input[type="range"] {
+    width:         100%;
+    height:        5px;
+    accent-color:  var(--accent-2);
+    cursor:        pointer;
+    border-radius: 999px;
+}
+
+/* ── 教育演示按钮行 ────────────────────────────────────────────────────────── */
+
+.demo-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap:     8px;
+    margin-bottom: 10px;
+}
+
+/* ── 自定义 Toggle 开关 ────────────────────────────────────────────────────── */
+
+.toggle-group { display: flex; flex-direction: column; gap: 6px; }
+
+.toggle-row {
+    display:     flex;
+    align-items: center;
+    gap:         9px;
+    cursor:      pointer;
+    font-size:   .8rem;
+    color:       var(--text);
+    user-select: none;
+}
+
+/* 隐藏原生 checkbox */
+.toggle-row input[type="checkbox"] { display: none; }
+
+.toggle-track {
+    position:      relative;
+    width:         34px;
+    height:        18px;
+    border-radius: 999px;
+    background:    rgba(148,163,184,.22);
+    border:        1px solid rgba(148,163,184,.2);
+    flex-shrink:   0;
+    transition:    background .2s, border-color .2s;
+}
+
+.toggle-thumb {
+    position:      absolute;
+    top:           2px;
+    left:          2px;
+    width:         12px;
+    height:        12px;
+    border-radius: 50%;
+    background:    #94a3b8;
+    transition:    transform .2s, background .2s;
+}
+
+.toggle-row input:checked ~ .toggle-track {
+    background:   rgba(56,189,248,.35);
+    border-color: rgba(56,189,248,.5);
+}
+
+.toggle-row input:checked ~ .toggle-track .toggle-thumb {
+    transform:  translateX(16px);
+    background: var(--accent-2);
+    box-shadow: 0 0 6px rgba(56,189,248,.6);
+}
+
+/* ── 提示文本 ──────────────────────────────────────────────────────────────── */
+
+.hint-text {
+    margin-top:  9px;
+    font-size:   .72rem;
+    color:       var(--muted);
+    line-height: 1.5;
+}
+
+/* ── 告警列表卡 ────────────────────────────────────────────────────────────── */
+
+.alerts-card { padding-bottom: 8px; }
+
+.alerts-list {
+    display:        flex;
+    flex-direction: column;
+    gap:            6px;
+    min-height:     40px;
+}
+
+.alert {
+    border-radius: 10px;
+    padding:       8px 11px;
+    font-size:     .76rem;
+    line-height:   1.45;
+    border:        1px solid transparent;
+}
+
+.alert.info {
+    background:   rgba(59,130,246,.13);
+    border-color: rgba(96,165,250,.26);
+    color:        #dbeafe;
+}
+
+.alert.warn {
+    background:   rgba(251,191,36,.13);
+    border-color: rgba(251,191,36,.28);
+    color:        #fde68a;
+}
+
+.alert.danger {
+    background:   rgba(239,68,68,.14);
+    border-color: rgba(248,113,113,.3);
+    color:        #fecaca;
+    animation:    pulse 1.1s ease-in-out infinite alternate;
+}
+
+.alert.webster {
+    background:   rgba(99,102,241,.14);
+    border-color: rgba(165,180,252,.28);
+    color:        #e0e7ff;
+}
+
+@keyframes pulse {
+    from { box-shadow: 0 0 0  2px rgba(248,113,113,.04); }
+    to   { box-shadow: 0 0 14px 2px rgba(248,113,113,.18); }
+}

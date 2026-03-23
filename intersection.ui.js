@@ -1,0 +1,266 @@
+// ─── UI 绑定、控制逻辑与主循环 ────────────────────────────────────────────────
+// 依赖：全部其他模块
+
+const canvas = document.getElementById("simCanvas");
+const ctx    = canvas.getContext("2d");
+
+// ── DOM 引用表 ─────────────────────────────────────────────────────────────────
+
+const ui = {
+    flow: {
+        N: document.getElementById("flowNorth"),
+        E: document.getElementById("flowEast"),
+        S: document.getElementById("flowSouth"),
+        W: document.getElementById("flowWest"),
+    },
+    flowValue: {
+        N: document.getElementById("flowNorthValue"),
+        E: document.getElementById("flowEastValue"),
+        S: document.getElementById("flowSouthValue"),
+        W: document.getElementById("flowWestValue"),
+    },
+    cycle:      document.getElementById("cycleLength"),
+    cycleValue: document.getElementById("cycleValue"),
+    green: [
+        document.getElementById("green0"),
+        document.getElementById("green1"),
+        document.getElementById("green2"),
+        document.getElementById("green3"),
+    ],
+    greenValue: [
+        document.getElementById("green0Value"),
+        document.getElementById("green1Value"),
+        document.getElementById("green2Value"),
+        document.getElementById("green3Value"),
+    ],
+    offset:             document.getElementById("offset"),
+    offsetValue:        document.getElementById("offsetValue"),
+    desiredSpeed:       document.getElementById("desiredSpeed"),
+    desiredSpeedValue:  document.getElementById("desiredSpeedValue"),
+    headway:            document.getElementById("headway"),
+    headwayValue:       document.getElementById("headwayValue"),
+    losDisplay:         document.getElementById("losDisplay"),
+    losLabel:           document.getElementById("losLabel"),
+    delayDisplay:       document.getElementById("delayDisplay"),
+    throughputDisplay:  document.getElementById("throughputDisplay"),
+    saturationDisplay:  document.getElementById("saturationDisplay"),
+    approachStats:      document.getElementById("approachStats"),
+    alerts:             document.getElementById("alerts"),
+    btnRun:             document.getElementById("btnRun"),
+    btnPause:           document.getElementById("btnPause"),
+    btnReset:           document.getElementById("btnReset"),
+    btnSpeed:           document.getElementById("btnSpeed"),
+    btnWebster:         document.getElementById("btnWebster"),
+    btnOversat:         document.getElementById("btnOversat"),
+    btnGreenWave:       document.getElementById("btnGreenWave"),
+    showQueue:          document.getElementById("showQueue"),
+    showSat:            document.getElementById("showSat"),
+    showSpaceTime:      document.getElementById("showSpaceTime"),
+};
+
+// ── 辅助：同步滑块值与显示标签 ────────────────────────────────────────────────
+
+function setSlider(input, display, value) {
+    input.value          = value;
+    display.textContent  = value;
+}
+
+// ── 信号配时应用 ───────────────────────────────────────────────────────────────
+
+function applySignalSettings() {
+    const greens = ui.green.map(el => parseFloat(el.value));
+    const cycle  = parseFloat(ui.cycle.value);
+    const offset = parseFloat(ui.offset.value);
+    state.signal.setPlan(greens, cycle, offset);
+    state.signal.applyLaneStates();
+}
+
+// ── Webster 一键优化 ───────────────────────────────────────────────────────────
+
+function runWebsterOptimization() {
+    const L              = 4 * PHASES.length;                     // 总损失时间（s）
+    const throughputShare = state.laneShares.left + state.laneShares.straight;
+    const criticalFlows  = DIRS.map(arm => state.armFlow[arm] * throughputShare);
+    const Y              = criticalFlows.map(q => q / CONFIG.satFlowPerLane);
+    const Ysum           = clamp(Y.reduce((a, b) => a + b, 0), 0.01, 0.92);
+    const Copt           = clamp(Math.ceil((1.5 * L + 5) / (1 - Ysum)), 30, 120);
+    const effectiveGreen = Math.max(Copt - L, 24);
+    const greens         = Y.map(y => Math.max(8, Math.round((effectiveGreen * y) / Ysum)));
+    const adjustedCycle  = greens.reduce((a, b) => a + b, 0) + L;
+
+    setSlider(ui.cycle, ui.cycleValue, adjustedCycle);
+    greens.forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+    applySignalSettings();
+
+    state.overlays.push({
+        type: "webster",
+        text: `Webster 最优: C=${adjustedCycle}s · 北${greens[0]}s 南${greens[1]}s 东${greens[2]}s 西${greens[3]}s`,
+        ttl:  5,
+    });
+}
+
+// ── 教育演示场景 ───────────────────────────────────────────────────────────────
+
+function setOversaturatedDemo() {
+    state.demo.oversat = true;
+    const flows = { N: 1700, E: 1500, S: 1700, W: 1400 };
+    for (const arm of DIRS) {
+        state.armFlow[arm] = flows[arm];
+        setSlider(ui.flow[arm], ui.flowValue[arm], flows[arm]);
+    }
+    setSlider(ui.cycle, ui.cycleValue, 110);
+    [18, 18, 16, 16].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+    applySignalSettings();
+    state.overlays.push({ type: "overflow", text: "过饱和场景已加载: v/c > 1，观察队列持续溢出", ttl: 6 });
+}
+
+function setGreenWaveDemo() {
+    state.demo.greenWave = !state.demo.greenWave;
+    setSlider(ui.offset, ui.offsetValue, state.demo.greenWave ? 8 : 0);
+    if (state.demo.greenWave) {
+        state.armFlow.N = 900;  state.armFlow.S = 900;
+        setSlider(ui.flow.N, ui.flowValue.N, 900);
+        setSlider(ui.flow.S, ui.flowValue.S, 900);
+        [22, 22, 12, 12].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+        setSlider(ui.cycle, ui.cycleValue, 84);
+        state.overlays.push({ type: "greenwave", text: "绿波协调启用: 主走廊相位差 8s，观察车辆连续通过", ttl: 6 });
+    } else {
+        state.overlays.push({ type: "greenwave", text: "绿波协调已关闭", ttl: 3 });
+    }
+    applySignalSettings();
+}
+
+// ── 性能指标 UI 刷新 ────────────────────────────────────────────────────────────
+
+function updatePerformanceUI() {
+    const avgDelay = state.performance.getAverageDelay();
+    const los      = losFromDelay(avgDelay);
+    state.performance.lastLOS = los;
+
+    ui.losDisplay.textContent    = los.grade;
+    ui.losDisplay.style.color    = los.color;
+    if (ui.losLabel) ui.losLabel.style.color = los.color;
+    ui.delayDisplay.textContent      = avgDelay.toFixed(1);
+    ui.throughputDisplay.textContent = Math.round(state.performance.getThroughputPerHour());
+    ui.saturationDisplay.textContent = Math.round(state.performance.getMeasuredSaturation());
+
+    // 各臂进口统计行
+    ui.approachStats.innerHTML = DIRS.map(arm => {
+        const q     = state.queueDetectors[arm].currentQueue;
+        const vc    = (state.armFlow[arm] / CONFIG.satFlowPerLane).toFixed(2);
+        const width = clamp((q / 80) * 100, 0, 100);
+        const vcNum = parseFloat(vc);
+        const vcColor = vcNum > 0.9 ? "#ef4444" : vcNum > 0.7 ? "#fb923c" : "#22c55e";
+        return `
+          <div class="approach-row">
+            <span class="badge">${arm}</span>
+            <div class="bar"><span style="width:${width}%"></span></div>
+            <span class="mono">${formatMeters(q)}</span>
+            <span class="mono" style="color:${vcColor}">v/c ${vc}</span>
+          </div>`;
+    }).join("");
+
+    // 教学标注告警
+    const alerts = [];
+    if (los.grade === "E" || los.grade === "F") {
+        alerts.push({ cls: "danger", text: `严重拥堵: 平均延误 ${avgDelay.toFixed(1)} s/辆，LOS ${los.grade}` });
+    }
+    const highVC = DIRS.find(arm => state.armFlow[arm] / CONFIG.satFlowPerLane > 0.9);
+    if (highVC) {
+        alerts.push({ cls: "warn", text: `${highVC} 进口 v/c > 0.9，接近过饱和，队列将持续增长` });
+    }
+    const spill = DIRS.find(arm => state.queueDetectors[arm].spillback);
+    if (spill) {
+        alerts.push({ cls: "danger", text: `⚠ ${spill} 进口排队溢出，干扰上游路段` });
+    }
+    if (ui.showSat.checked && state.performance.getMeasuredSaturation() > 0) {
+        alerts.push({ cls: "info", text: `饱和流率实测: ${Math.round(state.performance.getMeasuredSaturation())} 辆/h/车道` });
+    }
+    const popup = state.overlays[state.overlays.length - 1];
+    if (popup && ["webster", "greenwave", "overflow"].includes(popup.type)) {
+        alerts.push({ cls: popup.type === "overflow" ? "warn" : "info", text: popup.text });
+    }
+    ui.alerts.innerHTML = alerts.slice(0, 4)
+        .map(a => `<div class="alert ${a.cls}">${a.text}</div>`).join("");
+}
+
+// ── 全量 UI 显示同步 ────────────────────────────────────────────────────────────
+
+function updateUI() {
+    for (const arm of DIRS) ui.flowValue[arm].textContent = ui.flow[arm].value;
+    ui.cycleValue.textContent       = ui.cycle.value;
+    ui.offsetValue.textContent      = ui.offset.value;
+    ui.desiredSpeedValue.textContent = ui.desiredSpeed.value;
+    ui.headwayValue.textContent     = ui.headway.value;
+    ui.green.forEach((el, idx) => { ui.greenValue[idx].textContent = el.value; });
+}
+
+// ── 画布尺寸自适应 ─────────────────────────────────────────────────────────────
+
+function resizeCanvas() {
+    const rect        = document.getElementById("canvas-wrap").getBoundingClientRect();
+    canvas.width      = rect.width;
+    canvas.height     = rect.height;
+    CONFIG.center.x   = Math.max(380, rect.width * 0.5);
+    CONFIG.center.y   = rect.height * 0.5;
+    computeGeometry();
+}
+
+// ── 事件绑定 ───────────────────────────────────────────────────────────────────
+
+function bindRange(input, onChange) {
+    input.addEventListener("input", () => {
+        updateUI();
+        if (onChange) onChange();
+    });
+}
+
+function bindUI() {
+    for (const arm of DIRS) {
+        bindRange(ui.flow[arm], () => { state.armFlow[arm] = parseFloat(ui.flow[arm].value); });
+    }
+    bindRange(ui.cycle,  applySignalSettings);
+    bindRange(ui.offset, applySignalSettings);
+    ui.green.forEach(el => bindRange(el, applySignalSettings));
+    bindRange(ui.desiredSpeed, () => { state.baseVehicleParams.v0 = parseFloat(ui.desiredSpeed.value) / 3.6; });
+    bindRange(ui.headway,      () => { state.baseVehicleParams.T  = parseFloat(ui.headway.value); });
+
+    ui.btnRun.addEventListener("click",   () => { state.running = true; });
+    ui.btnPause.addEventListener("click", () => { state.running = false; });
+    ui.btnReset.addEventListener("click", resetSimulation);
+    ui.btnSpeed.addEventListener("click", () => {
+        CONFIG.timeWarp = CONFIG.timeWarp === 1 ? 2 : CONFIG.timeWarp === 2 ? 4 : 1;
+        ui.btnSpeed.textContent = `⚡${CONFIG.timeWarp}x`;
+    });
+    ui.btnWebster.addEventListener("click",  runWebsterOptimization);
+    ui.btnOversat.addEventListener("click",  setOversaturatedDemo);
+    ui.btnGreenWave.addEventListener("click", setGreenWaveDemo);
+    window.addEventListener("resize", resizeCanvas);
+}
+
+// ── 主循环 ─────────────────────────────────────────────────────────────────────
+
+function frame(ts) {
+    if (!state.lastFrame) state.lastFrame = ts;
+    const elapsed    = Math.min((ts - state.lastFrame) / 1000, 0.1);
+    state.lastFrame  = ts;
+
+    if (state.running) {
+        state.accumulator += elapsed * CONFIG.timeWarp;
+        while (state.accumulator >= CONFIG.dt) {
+            stepSimulation(CONFIG.dt);
+            state.accumulator -= CONFIG.dt;
+        }
+        updatePerformanceUI();
+    }
+    draw();
+    requestAnimationFrame(frame);
+}
+
+// ── 启动 ───────────────────────────────────────────────────────────────────────
+
+resizeCanvas();
+bindUI();
+updateUI();
+resetSimulation();
+requestAnimationFrame(frame);

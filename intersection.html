@@ -7,127 +7,188 @@
     <link rel="stylesheet" href="./intersection.css">
 </head>
 <body>
+
+    <!-- ── 仿真画布区域 ─────────────────────────────────────────── -->
     <div id="canvas-wrap">
         <canvas id="simCanvas"></canvas>
     </div>
+
+    <!-- ── 右侧控制面板 ────────────────────────────────────────── -->
     <aside id="controls">
-        <h1>十字路口信号控制仿真</h1>
-        <div class="intro">
-            四相位保护左转微观仿真。包含 IDM 跟驰、泊松到达、贝塞尔穿越、Webster 优化、过饱和与绿波教学演示。
-        </div>
 
+        <!-- 标题 -->
+        <header class="panel-header">
+            <div class="panel-title">
+                <span class="panel-icon">🚦</span>
+                <span>十字路口信号控制仿真</span>
+            </div>
+            <p class="intro">四相位保护左转 · IDM 跟驰 · Webster 优化 · 过饱和与绿波演示</p>
+        </header>
+
+        <!-- 播放控制条 -->
         <div class="toolbar">
-            <button id="btnRun">▶运行</button>
-            <button id="btnPause" class="secondary">⏸暂停</button>
-            <button id="btnReset" class="secondary">↺重置</button>
-            <button id="btnSpeed">⚡1x</button>
+            <button id="btnRun"   class="btn-primary" title="运行">▶ 运行</button>
+            <button id="btnPause" class="btn-ghost"   title="暂停">⏸ 暂停</button>
+            <button id="btnReset" class="btn-ghost"   title="重置">↺ 重置</button>
+            <button id="btnSpeed" class="btn-accent"  title="切换倍速">⚡1x</button>
         </div>
 
-        <div class="section">
-            <h2>流量控制</h2>
-            <div class="field">
-                <label>北进口 <span id="flowNorthValue" class="value">800</span> 辆/h</label>
-                <input id="flowNorth" type="range" min="200" max="1800" step="50" value="800">
-            </div>
-            <div class="field">
-                <label>东进口 <span id="flowEastValue" class="value">600</span> 辆/h</label>
-                <input id="flowEast" type="range" min="200" max="1800" step="50" value="600">
-            </div>
-            <div class="field">
-                <label>南进口 <span id="flowSouthValue" class="value">800</span> 辆/h</label>
-                <input id="flowSouth" type="range" min="200" max="1800" step="50" value="800">
-            </div>
-            <div class="field">
-                <label>西进口 <span id="flowWestValue" class="value">400</span> 辆/h</label>
-                <input id="flowWest" type="range" min="200" max="1800" step="50" value="400">
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>信号配时</h2>
-            <div class="field">
-                <button id="btnWebster">Webster 自动优化</button>
-            </div>
-            <div class="field">
-                <label>周期 <span id="cycleValue" class="value">80</span> s</label>
-                <input id="cycleLength" type="range" min="40" max="120" step="1" value="80">
-            </div>
-            <div class="field">
-                <label>北相绿灯 <span id="green0Value" class="value">16</span> s</label>
-                <input id="green0" type="range" min="8" max="45" step="1" value="16">
-            </div>
-            <div class="field">
-                <label>南相绿灯 <span id="green1Value" class="value">16</span> s</label>
-                <input id="green1" type="range" min="8" max="45" step="1" value="16">
-            </div>
-            <div class="field">
-                <label>东相绿灯 <span id="green2Value" class="value">16</span> s</label>
-                <input id="green2" type="range" min="8" max="45" step="1" value="16">
-            </div>
-            <div class="field">
-                <label>西相绿灯 <span id="green3Value" class="value">16</span> s</label>
-                <input id="green3" type="range" min="8" max="45" step="1" value="16">
-            </div>
-            <div class="field">
-                <label>相位差(绿波) <span id="offsetValue" class="value">0</span> s</label>
-                <input id="offset" type="range" min="0" max="20" step="1" value="0">
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>IDM 参数</h2>
-            <div class="field">
-                <label>期望速度 <span id="desiredSpeedValue" class="value">50</span> km/h</label>
-                <input id="desiredSpeed" type="range" min="30" max="70" step="1" value="50">
-            </div>
-            <div class="field">
-                <label>车头时距 T <span id="headwayValue" class="value">1.5</span> s</label>
-                <input id="headway" type="range" min="0.8" max="2.6" step="0.1" value="1.5">
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>实时指标</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div id="losDisplay" class="big">C</div>
-                    <div class="small">LOS 等级</div>
+        <!-- ── 实时指标卡片 ─────────────────────────────────────── -->
+        <section class="card metrics-card">
+            <div class="card-header">实时指标</div>
+            <div class="metrics-grid">
+                <div class="metric-cell metric-los">
+                    <div id="losDisplay" class="metric-value los-value">—</div>
+                    <div class="metric-label">LOS 服务水平</div>
                 </div>
-                <div class="stat-card">
-                    <div id="delayDisplay" class="big">28.0</div>
-                    <div class="small">平均延误 s/辆</div>
+                <div class="metric-cell">
+                    <div id="delayDisplay" class="metric-value">—</div>
+                    <div class="metric-label">平均延误 s/辆</div>
                 </div>
-                <div class="stat-card">
-                    <div id="throughputDisplay" class="big">0</div>
-                    <div class="small">通行量 辆/h</div>
+                <div class="metric-cell">
+                    <div id="throughputDisplay" class="metric-value">0</div>
+                    <div class="metric-label">通行量 辆/h</div>
                 </div>
-                <div class="stat-card">
-                    <div id="saturationDisplay" class="big">0</div>
-                    <div class="small">实测饱和流率</div>
+                <div class="metric-cell">
+                    <div id="saturationDisplay" class="metric-value">0</div>
+                    <div class="metric-label">实测饱和流率</div>
                 </div>
             </div>
-            <div id="approachStats"></div>
-        </div>
 
-        <div class="section">
-            <h2>教育演示</h2>
-            <div class="toolbar" style="grid-template-columns: 1fr 1fr;">
-                <button id="btnOversat" class="danger">过饱和演示</button>
-                <button id="btnGreenWave" class="warn">绿波协调</button>
-            </div>
-            <label class="checkbox"><input id="showQueue" type="checkbox" checked> 排队波可视化</label>
-            <label class="checkbox"><input id="showSat" type="checkbox" checked> 标注饱和流率</label>
-            <label class="checkbox"><input id="showSpaceTime" type="checkbox" checked> 时空图</label>
-            <div class="hint">
-                饱和流率假定 1800 辆/h/车道，右下角时空图显示北进口轨迹与信号背景，用于观察队列消散斜率。
-            </div>
-        </div>
+            <!-- 各臂进口条 -->
+            <div id="approachStats" class="approach-list"></div>
+        </section>
 
-        <div class="section">
-            <h2>教学标注</h2>
-            <div id="alerts"></div>
-        </div>
+        <!-- ── 流量控制 ──────────────────────────────────────────── -->
+        <section class="card">
+            <div class="card-header">
+                <span>流量控制</span>
+                <span class="card-hint">辆/h</span>
+            </div>
+            <div class="slider-group">
+                <div class="slider-row">
+                    <span class="dir-badge dir-n">北</span>
+                    <input id="flowNorth" type="range" min="200" max="1800" step="50" value="800">
+                    <span id="flowNorthValue" class="slider-val">800</span>
+                </div>
+                <div class="slider-row">
+                    <span class="dir-badge dir-e">东</span>
+                    <input id="flowEast"  type="range" min="200" max="1800" step="50" value="600">
+                    <span id="flowEastValue"  class="slider-val">600</span>
+                </div>
+                <div class="slider-row">
+                    <span class="dir-badge dir-s">南</span>
+                    <input id="flowSouth" type="range" min="200" max="1800" step="50" value="800">
+                    <span id="flowSouthValue" class="slider-val">800</span>
+                </div>
+                <div class="slider-row">
+                    <span class="dir-badge dir-w">西</span>
+                    <input id="flowWest"  type="range" min="200" max="1800" step="50" value="400">
+                    <span id="flowWestValue"  class="slider-val">400</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── 信号配时 ──────────────────────────────────────────── -->
+        <section class="card">
+            <div class="card-header">
+                <span>信号配时</span>
+                <button id="btnWebster" class="btn-inline">✦ Webster 优化</button>
+            </div>
+            <div class="slider-group">
+                <div class="slider-row">
+                    <span class="label-text">周期</span>
+                    <input id="cycleLength" type="range" min="40" max="120" step="1" value="80">
+                    <span id="cycleValue" class="slider-val">80</span><span class="unit">s</span>
+                </div>
+                <div class="phase-grid">
+                    <div class="phase-row">
+                        <span class="phase-tag">北</span>
+                        <input id="green0" type="range" min="8" max="45" step="1" value="16">
+                        <span id="green0Value" class="slider-val">16</span><span class="unit">s</span>
+                    </div>
+                    <div class="phase-row">
+                        <span class="phase-tag">南</span>
+                        <input id="green1" type="range" min="8" max="45" step="1" value="16">
+                        <span id="green1Value" class="slider-val">16</span><span class="unit">s</span>
+                    </div>
+                    <div class="phase-row">
+                        <span class="phase-tag">东</span>
+                        <input id="green2" type="range" min="8" max="45" step="1" value="16">
+                        <span id="green2Value" class="slider-val">16</span><span class="unit">s</span>
+                    </div>
+                    <div class="phase-row">
+                        <span class="phase-tag">西</span>
+                        <input id="green3" type="range" min="8" max="45" step="1" value="16">
+                        <span id="green3Value" class="slider-val">16</span><span class="unit">s</span>
+                    </div>
+                </div>
+                <div class="slider-row">
+                    <span class="label-text">相位差</span>
+                    <input id="offset" type="range" min="0" max="20" step="1" value="0">
+                    <span id="offsetValue" class="slider-val">0</span><span class="unit">s</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── IDM 参数 ──────────────────────────────────────────── -->
+        <section class="card">
+            <div class="card-header">IDM 跟驰参数</div>
+            <div class="slider-group">
+                <div class="slider-row">
+                    <span class="label-text">期望速度</span>
+                    <input id="desiredSpeed" type="range" min="30" max="70" step="1" value="50">
+                    <span id="desiredSpeedValue" class="slider-val">50</span><span class="unit">km/h</span>
+                </div>
+                <div class="slider-row">
+                    <span class="label-text">车头时距 T</span>
+                    <input id="headway" type="range" min="0.8" max="2.6" step="0.1" value="1.5">
+                    <span id="headwayValue" class="slider-val">1.5</span><span class="unit">s</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── 教育演示 ──────────────────────────────────────────── -->
+        <section class="card">
+            <div class="card-header">教育演示</div>
+            <div class="demo-buttons">
+                <button id="btnOversat"  class="btn-danger">⚠ 过饱和</button>
+                <button id="btnGreenWave" class="btn-warn">🌊 绿波协调</button>
+            </div>
+            <div class="toggle-group">
+                <label class="toggle-row">
+                    <input id="showQueue"     type="checkbox" checked>
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>排队波可视化</span>
+                </label>
+                <label class="toggle-row">
+                    <input id="showSat"       type="checkbox" checked>
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>饱和流率标注</span>
+                </label>
+                <label class="toggle-row">
+                    <input id="showSpaceTime" type="checkbox" checked>
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>时空图（北进口）</span>
+                </label>
+            </div>
+            <p class="hint-text">理论饱和流率 1800 辆/h/车道。时空图斜率反映消散波速，绿色背景为绿灯窗口。</p>
+        </section>
+
+        <!-- ── 教学标注告警 ───────────────────────────────────────── -->
+        <section class="card alerts-card">
+            <div class="card-header">教学标注</div>
+            <div id="alerts" class="alerts-list"></div>
+        </section>
+
     </aside>
-    <script src="./intersection.js"></script>
+
+    <!-- 脚本：按依赖顺序加载 -->
+    <script src="./intersection.config.js"></script>
+    <script src="./intersection.geometry.js"></script>
+    <script src="./intersection.models.js"></script>
+    <script src="./intersection.simulation.js"></script>
+    <script src="./intersection.render.js"></script>
+    <script src="./intersection.ui.js"></script>
 </body>
 </html>
