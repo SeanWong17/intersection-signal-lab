@@ -338,17 +338,8 @@ function drawEducationLabels() {
 // ── 时空图小窗口 ───────────────────────────────────────────────────────────────
 
 function estimateNorthGreenWindows(startTime, endTime) {
-    const windows  = [];
     const phaseIdx = PHASES.findIndex(p => p.arm === "N");
-    const green    = state.signal.greenTimes[phaseIdx];
-    const cycle    = state.signal.cycleLength;
-    let t = -cycle * 2;
-    while (t < endTime + cycle) {
-        const start = t, end = t + green;
-        if (end >= startTime && start <= endTime) windows.push({ start, end });
-        t += cycle;
-    }
-    return windows;
+    return state.signal.getPhaseGreenWindows(phaseIdx, startTime, endTime);
 }
 
 function drawSpaceTimeWindow() {

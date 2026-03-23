@@ -79,6 +79,95 @@ class TrafficSignal {
         this.offset      = offset;
     }
 
+    getLostTimePerPhase() {
+        return this.yellow + this.allRed;
+    }
+
+    getActualCycleLength() {
+        return this.greenTimes.reduce((sum, green) => sum + green, 0)
+            + PHASES.length * this.getLostTimePerPhase();
+    }
+
+    getPhaseStartOffset(phaseIndex) {
+        let offset = 0;
+        for (let i = 0; i < phaseIndex; i++) {
+            offset += this.greenTimes[i] + this.yellow + this.allRed;
+        }
+        return offset;
+    }
+
+    getStateAt(simTime) {
+        const cycle = this.getActualCycleLength();
+        const cycleTime = ((simTime + this.offset) % cycle + cycle) % cycle;
+        let cursor = 0;
+
+        for (let phaseIndex = 0; phaseIndex < PHASES.length; phaseIndex++) {
+            const green = this.greenTimes[phaseIndex];
+            if (cycleTime < cursor + green) {
+                return {
+                    phaseIndex,
+                    stage: "green",
+                    stageTimer: cycleTime - cursor,
+                    countdown: cursor + green - cycleTime
+                };
+            }
+            cursor += green;
+
+            if (cycleTime < cursor + this.yellow) {
+                return {
+                    phaseIndex,
+                    stage: "yellow",
+                    stageTimer: cycleTime - cursor,
+                    countdown: cursor + this.yellow - cycleTime
+                };
+            }
+            cursor += this.yellow;
+
+            if (cycleTime < cursor + this.allRed) {
+                return {
+                    phaseIndex,
+                    stage: "allred",
+                    stageTimer: cycleTime - cursor,
+                    countdown: cursor + this.allRed - cycleTime
+                };
+            }
+            cursor += this.allRed;
+        }
+
+        return {
+            phaseIndex: 0,
+            stage: "green",
+            stageTimer: 0,
+            countdown: this.greenTimes[0]
+        };
+    }
+
+    syncToTime(simTime) {
+        const snapshot = this.getStateAt(simTime);
+        this.phaseIndex = snapshot.phaseIndex;
+        this.stage = snapshot.stage;
+        this.stageTimer = snapshot.stageTimer;
+        this.countdown = snapshot.countdown;
+        this.applyLaneStates();
+    }
+
+    getPhaseGreenWindows(phaseIndex, startTime, endTime) {
+        const cycle = this.getActualCycleLength();
+        const phaseStart = this.getPhaseStartOffset(phaseIndex) - this.offset;
+        const windows = [];
+        let n = Math.floor((startTime - phaseStart) / cycle) - 1;
+        while (true) {
+            const start = phaseStart + n * cycle;
+            const end = start + this.greenTimes[phaseIndex];
+            if (start > endTime) break;
+            if (end >= startTime && start <= endTime) {
+                windows.push({ start, end });
+            }
+            n += 1;
+        }
+        return windows;
+    }
+
     applyLaneStates() {
         // 默认全部为红，右转常绿
         for (const arm of DIRS) {
@@ -109,21 +198,8 @@ class TrafficSignal {
         return this.laneState[key] === "green";
     }
 
-    update(dt) {
-        this.stageTimer += dt;
-        const duration = this.getStageDuration();
-        if (this.stageTimer >= duration) {
-            this.stageTimer -= duration;
-            if      (this.stage === "green")  this.stage = "yellow";
-            else if (this.stage === "yellow") this.stage = "allred";
-            else {
-                this.stage      = "green";
-                this.phaseIndex = (this.phaseIndex + 1) % PHASES.length;
-            }
-            this.applyLaneStates();
-        } else {
-            this.countdown = duration - this.stageTimer;
-        }
+    update(simTime) {
+        this.syncToTime(simTime);
     }
 }
 
@@ -174,8 +250,7 @@ class PerformanceMonitor {
         while (this.departed.length && simTime - this.departed[0].t > 3600) this.departed.shift();
     }
 
-    recordSaturation(vehicle, simTime, stage) {
-        if (stage !== "green") return;
+    recordSaturation(simTime) {
         this.phaseDepartures.push(simTime);
         while (this.phaseDepartures.length && simTime - this.phaseDepartures[0] > 30) {
             this.phaseDepartures.shift();
@@ -187,8 +262,10 @@ class PerformanceMonitor {
         return this.delaySamples.reduce((s, d) => s + d, 0) / this.delaySamples.length;
     }
 
-    getThroughputPerHour() {
-        return this.departed.length;
+    getThroughputPerHour(simTime) {
+        const window = Math.min(Math.max(simTime, 0), 3600);
+        if (window <= 0) return 0;
+        return (this.departed.length / window) * 3600;
     }
 
     getMeasuredSaturation() {

@@ -187,6 +187,7 @@ function updateInboundVehicles(dt) {
                     vehicle.crossingDistance = 0;
                     vehicle.vel             = clamp(vehicle.vel, 3, CONFIG.crossingSpeed);
                     reserveIntersection(vehicle);
+                    state.performance.recordSaturation(state.simTime);
                 } else {
                     vehicle.pos = CONFIG.approachLengthM - 0.1;
                     vehicle.vel = 0;
@@ -205,7 +206,6 @@ function updateCrossingVehicles(dt) {
             vehicle.segment       = "outbound";
             vehicle.pos           = 0;
             vehicle.departureTime = state.simTime;
-            state.performance.recordSaturation(vehicle, state.simTime, state.signal.stage);
         }
     }
 }
@@ -260,6 +260,7 @@ function resetSimulation() {
     for (const arm of DIRS) state.queueDetectors[arm] = new QueueDetector(arm);
     state.signal = new TrafficSignal();
     applySignalSettings();
+    state.signal.syncToTime(state.simTime);
     resetLaneBuckets();
     resetGenerators();
     updateUI();
@@ -270,7 +271,6 @@ function resetSimulation() {
 function stepSimulation(dt) {
     generateArrivals();
     rebuildLaneBuckets();
-    state.signal.update(dt);
     updateInboundVehicles(dt);
     updateCrossingVehicles(dt);
     updateOutboundVehicles(dt);
@@ -278,4 +278,5 @@ function stepSimulation(dt) {
     updateQueues();
     updateSpaceTime();
     state.simTime += dt;
+    state.signal.update(state.simTime);
 }

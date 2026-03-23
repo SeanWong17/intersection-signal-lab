@@ -65,6 +65,58 @@ function setSlider(input, display, value) {
     display.textContent  = value;
 }
 
+function getSignalLostTime() {
+    return PHASES.length * (CONFIG.yellowTime + CONFIG.allRedTime);
+}
+
+function getGreenBounds() {
+    return ui.green.map(input => ({
+        min: parseFloat(input.min),
+        max: parseFloat(input.max)
+    }));
+}
+
+function normalizeGreensToCycle(greens, cycle) {
+    const bounds = getGreenBounds();
+    const available = Math.max(cycle - getSignalLostTime(), bounds.reduce((sum, item) => sum + item.min, 0));
+    const total = greens.reduce((sum, value) => sum + value, 0) || greens.length;
+    const scaled = greens.map((value, index) => {
+        const share = value / total;
+        const target = available * share;
+        return clamp(Math.round(target), bounds[index].min, bounds[index].max);
+    });
+
+    let diff = available - scaled.reduce((sum, value) => sum + value, 0);
+    while (diff !== 0) {
+        const direction = Math.sign(diff);
+        let changed = false;
+        for (let i = 0; i < scaled.length && diff !== 0; i++) {
+            const next = scaled[i] + direction;
+            if (next < bounds[i].min || next > bounds[i].max) continue;
+            scaled[i] = next;
+            diff -= direction;
+            changed = true;
+        }
+        if (!changed) break;
+    }
+
+    return scaled;
+}
+
+function syncCycleFromGreens() {
+    const greens = ui.green.map(input => parseFloat(input.value));
+    const cycle = greens.reduce((sum, value) => sum + value, 0) + getSignalLostTime();
+    setSlider(ui.cycle, ui.cycleValue, cycle);
+}
+
+function syncGreensFromCycle() {
+    const cycle = parseFloat(ui.cycle.value);
+    const greens = ui.green.map(input => parseFloat(input.value));
+    const normalized = normalizeGreensToCycle(greens, cycle);
+    normalized.forEach((value, index) => setSlider(ui.green[index], ui.greenValue[index], value));
+    syncCycleFromGreens();
+}
+
 // ── 信号配时应用 ───────────────────────────────────────────────────────────────
 
 function applySignalSettings() {
@@ -72,6 +124,7 @@ function applySignalSettings() {
     const cycle  = parseFloat(ui.cycle.value);
     const offset = parseFloat(ui.offset.value);
     state.signal.setPlan(greens, cycle, offset);
+    state.signal.syncToTime(state.simTime);
     state.signal.applyLaneStates();
 }
 
@@ -90,6 +143,7 @@ function runWebsterOptimization() {
 
     setSlider(ui.cycle, ui.cycleValue, adjustedCycle);
     greens.forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+    syncCycleFromGreens();
     applySignalSettings();
 
     state.overlays.push({
@@ -110,6 +164,7 @@ function setOversaturatedDemo() {
     }
     setSlider(ui.cycle, ui.cycleValue, 110);
     [18, 18, 16, 16].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+    syncGreensFromCycle();
     applySignalSettings();
     state.overlays.push({ type: "overflow", text: "过饱和场景已加载: v/c > 1，观察队列持续溢出", ttl: 6 });
 }
@@ -123,10 +178,12 @@ function setGreenWaveDemo() {
         setSlider(ui.flow.S, ui.flowValue.S, 900);
         [22, 22, 12, 12].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
         setSlider(ui.cycle, ui.cycleValue, 84);
+        syncCycleFromGreens();
         state.overlays.push({ type: "greenwave", text: "绿波协调启用: 主走廊相位差 8s，观察车辆连续通过", ttl: 6 });
     } else {
         state.overlays.push({ type: "greenwave", text: "绿波协调已关闭", ttl: 3 });
     }
+    syncCycleFromGreens();
     applySignalSettings();
 }
 
@@ -141,7 +198,7 @@ function updatePerformanceUI() {
     ui.losDisplay.style.color    = los.color;
     if (ui.losLabel) ui.losLabel.style.color = los.color;
     ui.delayDisplay.textContent      = avgDelay.toFixed(1);
-    ui.throughputDisplay.textContent = Math.round(state.performance.getThroughputPerHour());
+    ui.throughputDisplay.textContent = Math.round(state.performance.getThroughputPerHour(state.simTime));
     ui.saturationDisplay.textContent = Math.round(state.performance.getMeasuredSaturation());
 
     // 各臂进口统计行
@@ -204,6 +261,19 @@ function resizeCanvas() {
     CONFIG.center.x   = Math.max(380, rect.width * 0.5);
     CONFIG.center.y   = rect.height * 0.5;
     computeGeometry();
+    refreshVehicleGeometry();
+}
+
+function refreshVehicleGeometry() {
+    for (const vehicle of state.vehicles) {
+        const nextPath = geometry.pathCache[laneId(vehicle.arm, vehicle.turnIntent)];
+        if (vehicle.segment === "crossing" && vehicle.crossingPath) {
+            const prevLength = Math.max(vehicle.crossingPath.lengthMeters, 1e-6);
+            const progress = clamp(vehicle.crossingDistance / prevLength, 0, 1);
+            vehicle.crossingDistance = progress * nextPath.lengthMeters;
+        }
+        vehicle.crossingPath = nextPath;
+    }
 }
 
 // ── 事件绑定 ───────────────────────────────────────────────────────────────────
@@ -219,9 +289,15 @@ function bindUI() {
     for (const arm of DIRS) {
         bindRange(ui.flow[arm], () => { state.armFlow[arm] = parseFloat(ui.flow[arm].value); });
     }
-    bindRange(ui.cycle,  applySignalSettings);
+    bindRange(ui.cycle, () => {
+        syncGreensFromCycle();
+        applySignalSettings();
+    });
     bindRange(ui.offset, applySignalSettings);
-    ui.green.forEach(el => bindRange(el, applySignalSettings));
+    ui.green.forEach(el => bindRange(el, () => {
+        syncCycleFromGreens();
+        applySignalSettings();
+    }));
     bindRange(ui.desiredSpeed, () => { state.baseVehicleParams.v0 = parseFloat(ui.desiredSpeed.value) / 3.6; });
     bindRange(ui.headway,      () => { state.baseVehicleParams.T  = parseFloat(ui.headway.value); });
 
