@@ -77,8 +77,14 @@ vm.runInContext(`
     globalThis.__vehicleA = new Vehicle(1, "N", "straight", 0, { v0: 13.89, T: 1.5, a: 1.2, b: 2.0, s0: 2.0 });
     setRandomSeed(77);
     globalThis.__vehicleB = new Vehicle(1, "N", "straight", 0, { v0: 13.89, T: 1.5, a: 1.2, b: 2.0, s0: 2.0 });
+    __vehicleA.segment = "outbound";
+    __vehicleA.pos = 0;
+    globalThis.__outboundStart = __vehicleA.positionPoint;
+    __vehicleA.pos = 20;
+    globalThis.__outboundLater = __vehicleA.positionPoint;
 `, context);
 assert.strictEqual(context.__vehicleA.length, context.__vehicleB.length, "vehicle length should be reproducible");
 assert.strictEqual(context.__vehicleA.v0, context.__vehicleB.v0, "vehicle desired speed should be reproducible");
+assert(context.__outboundLater.y > context.__outboundStart.y, "outbound vehicle should move away from the intersection");
 
 console.log("release-check: all checks passed");

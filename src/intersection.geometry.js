@@ -91,7 +91,7 @@ function computeGeometry() {
 function getLanePoint(arm, lane, posMeters, inbound = true) {
     const armGeo = geometry.arms[arm];
     const offset = armGeo.laneOffsets[lane];
-    const dir    = inbound ? armGeo.dir : { x: -armGeo.dir.x, y: -armGeo.dir.y };
+    const dir    = armGeo.dir;
     const base   = inbound ? armGeo.inboundFar : armGeo.outboundNear;
     const posPx  = posMeters * CONFIG.pixelPerMeter;
     return {

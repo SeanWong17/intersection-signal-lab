@@ -65,10 +65,10 @@ class TrafficSignal {
         this.stage       = "green";   // green | yellow | allred
         this.stageTimer  = 0;
         this.offset      = 0;
-        this.greenTimes  = [16, 16, 16, 16];
+        this.greenTimes  = [32, 24, 32, 16];
         this.yellow      = CONFIG.yellowTime;
         this.allRed      = CONFIG.allRedTime;
-        this.cycleLength = 80;
+        this.cycleLength = 120;
         this.laneState   = {};
         this.countdown   = 0;
         this.applyLaneStates();
