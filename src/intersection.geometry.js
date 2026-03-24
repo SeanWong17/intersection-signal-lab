@@ -11,31 +11,53 @@ const geometry = {
 };
 
 function getInboundLaneOffsets() {
+    const divider = CONFIG.centerDividerPx * 0.5;
     return {
-        left: -CONFIG.laneWidthPx * 0.5,
-        straight: -CONFIG.laneWidthPx * 1.5,
-        right: -CONFIG.laneWidthPx * 2.5,
+        left: -(divider + CONFIG.laneWidthPx * 0.5),
+        straight: -(divider + CONFIG.laneWidthPx * 1.5),
+        right: -(divider + CONFIG.laneWidthPx * 2.5),
     };
 }
 
 function getOutboundLaneOffsets() {
+    const divider = CONFIG.centerDividerPx * 0.5;
     return {
-        left: CONFIG.laneWidthPx * 0.5,
-        straight: CONFIG.laneWidthPx * 1.5,
-        right: CONFIG.laneWidthPx * 2.5,
+        left: divider + CONFIG.laneWidthPx * 0.5,
+        straight: divider + CONFIG.laneWidthPx * 1.5,
+        right: divider + CONFIG.laneWidthPx * 2.5,
     };
 }
 
 function getBoundaryOffsets() {
-    return [-2, -1, 1, 2].map(value => value * CONFIG.laneWidthPx);
+    const divider = CONFIG.centerDividerPx * 0.5;
+    return [
+        -(divider + CONFIG.laneWidthPx * 2),
+        -(divider + CONFIG.laneWidthPx),
+        -divider,
+        divider,
+        divider + CONFIG.laneWidthPx,
+        divider + CONFIG.laneWidthPx * 2,
+    ];
 }
 
 function getInboundBoundaryOffsets() {
-    return [0, -1, -2, -3].map(value => value * CONFIG.laneWidthPx);
+    const divider = CONFIG.centerDividerPx * 0.5;
+    return [
+        -divider,
+        -(divider + CONFIG.laneWidthPx),
+        -(divider + CONFIG.laneWidthPx * 2),
+        -(divider + CONFIG.laneWidthPx * 3),
+    ];
 }
 
 function getOutboundBoundaryOffsets() {
-    return [0, 1, 2, 3].map(value => value * CONFIG.laneWidthPx);
+    const divider = CONFIG.centerDividerPx * 0.5;
+    return [
+        divider,
+        divider + CONFIG.laneWidthPx,
+        divider + CONFIG.laneWidthPx * 2,
+        divider + CONFIG.laneWidthPx * 3,
+    ];
 }
 
 function computeGeometry() {
@@ -47,11 +69,10 @@ function computeGeometry() {
     const outboundLaneOffsets = getOutboundLaneOffsets();
     const inboundBoundaryOffsets = getInboundBoundaryOffsets();
     const outboundBoundaryOffsets = getOutboundBoundaryOffsets();
-    const signalPullback = {
-        left: 56,
-        straight: 28,
-        right: 0,
-    };
+    const signalLanes = ["left", "straight", "right"];
+    const signalSpacing = 30;
+    const signalUpstream = 28;
+    const signalOutside = CONFIG.laneWidthPx * 0.9;
 
     for (const arm of DIRS) {
         const dir  = DIR_VECTORS[arm];
@@ -83,7 +104,13 @@ function computeGeometry() {
             boundaryOffsets: getBoundaryOffsets(),
         };
 
-        for (const lane of ["left", "straight", "right"]) {
+        const signalBaseOffset = inboundBoundaryOffsets[inboundBoundaryOffsets.length - 1] - signalOutside;
+        const signalBase = {
+            x: approachAnchor.x + side.x * signalBaseOffset + dir.x * signalUpstream,
+            y: approachAnchor.y + side.y * signalBaseOffset + dir.y * signalUpstream,
+        };
+
+        signalLanes.forEach((lane, index) => {
             const offset = inboundLaneOffsets[lane];
             geometry.stopLines[laneId(arm, lane)] = {
                 a: {
@@ -100,10 +127,10 @@ function computeGeometry() {
                 },
             };
             geometry.signalHeads[laneId(arm, lane)] = {
-                x: approachAnchor.x + side.x * offset - dir.x * signalPullback[lane],
-                y: approachAnchor.y + side.y * offset - dir.y * signalPullback[lane],
+                x: signalBase.x + dir.x * signalSpacing * index,
+                y: signalBase.y + dir.y * signalSpacing * index,
             };
-        }
+        });
     }
 
     geometry.intersectionBox = {

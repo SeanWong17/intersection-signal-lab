@@ -22,7 +22,7 @@ function drawBackground() {
 // ── 路面 ──────────────────────────────────────────────────────────────────────
 
 function getRoadHalfWidthPx() {
-    return CONFIG.laneWidthPx * 3.25;
+    return CONFIG.centerDividerPx * 0.5 + CONFIG.laneWidthPx * 3.35;
 }
 
 function drawRoadSurface() {
@@ -49,17 +49,21 @@ function drawRoadSurface() {
 
 function drawMarkings() {
     const c        = CONFIG.center;
-    const roadHalf = getRoadHalfWidthPx() - CONFIG.laneWidthPx * 0.15;
+    const roadHalf = getRoadHalfWidthPx() - CONFIG.laneWidthPx * 0.12;
 
     ctx.save();
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.35;
     ctx.setLineDash([]);
 
     for (const arm of DIRS) {
         const armGeo = geometry.arms[arm];
-        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        const outerInbound = armGeo.inboundBoundaryOffsets[armGeo.inboundBoundaryOffsets.length - 1];
+        const outerOutbound = armGeo.outboundBoundaryOffsets[armGeo.outboundBoundaryOffsets.length - 1];
 
-        for (const offset of armGeo.inboundBoundaryOffsets.slice(1)) {
+        ctx.strokeStyle = "rgba(255,255,255,0.72)";
+        ctx.setLineDash([12, 10]);
+
+        for (const offset of armGeo.inboundBoundaryOffsets.slice(1, -1)) {
             const p1 = {
                 x: armGeo.inboundFar.x  + armGeo.side.x * offset,
                 y: armGeo.inboundFar.y  + armGeo.side.y * offset,
@@ -74,7 +78,7 @@ function drawMarkings() {
             ctx.stroke();
         }
 
-        for (const offset of armGeo.outboundBoundaryOffsets.slice(1)) {
+        for (const offset of armGeo.outboundBoundaryOffsets.slice(1, -1)) {
             const p1 = {
                 x: armGeo.approachAnchor.x + armGeo.side.x * offset,
                 y: armGeo.approachAnchor.y + armGeo.side.y * offset,
@@ -89,9 +93,10 @@ function drawMarkings() {
             ctx.stroke();
         }
 
+        ctx.setLineDash([]);
         ctx.strokeStyle = "rgba(255,255,255,0.9)";
-        ctx.lineWidth = 1.6;
-        for (const offset of [-CONFIG.laneWidthPx * 3, CONFIG.laneWidthPx * 3]) {
+        ctx.lineWidth = 1.8;
+        for (const offset of [outerInbound, outerOutbound]) {
             const p1 = {
                 x: armGeo.inboundFar.x + armGeo.side.x * offset,
                 y: armGeo.inboundFar.y + armGeo.side.y * offset,
@@ -107,8 +112,8 @@ function drawMarkings() {
         }
 
         ctx.strokeStyle = "rgba(251,191,36,0.88)";
-        ctx.lineWidth = 2;
-        for (const offset of [-CONFIG.laneWidthPx * 0.12, CONFIG.laneWidthPx * 0.12]) {
+        ctx.lineWidth = 2.4;
+        for (const offset of [-CONFIG.centerDividerPx * 0.5, CONFIG.centerDividerPx * 0.5]) {
             const p1 = {
                 x: armGeo.inboundFar.x + armGeo.side.x * offset,
                 y: armGeo.inboundFar.y + armGeo.side.y * offset,
@@ -236,6 +241,8 @@ function drawArrowHead(point, direction, side, size) {
 
 function drawSignals() {
     for (const phase of PHASES) {
+        const armGeo = geometry.arms[phase.arm];
+        drawSignalSupport(armGeo);
         for (const lane of ["left", "straight"]) {
             const key       = laneId(phase.arm, lane);
             const head      = geometry.signalHeads[key];
@@ -247,6 +254,34 @@ function drawSignals() {
     }
 }
 
+function drawSignalSupport(armGeo) {
+    const outerInbound = armGeo.inboundBoundaryOffsets[armGeo.inboundBoundaryOffsets.length - 1];
+    const poleOffset = outerInbound - CONFIG.laneWidthPx * 0.9;
+    const poleBase = {
+        x: armGeo.approachAnchor.x + armGeo.side.x * poleOffset + armGeo.dir.x * 18,
+        y: armGeo.approachAnchor.y + armGeo.side.y * poleOffset + armGeo.dir.y * 18,
+    };
+    const poleTop = {
+        x: poleBase.x + armGeo.side.x * 18,
+        y: poleBase.y + armGeo.side.y * 18,
+    };
+    const mastEnd = {
+        x: poleTop.x + armGeo.dir.x * 74,
+        y: poleTop.y + armGeo.dir.y * 74,
+    };
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(148,163,184,0.75)";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(poleBase.x, poleBase.y);
+    ctx.lineTo(poleTop.x, poleTop.y);
+    ctx.lineTo(mastEnd.x, mastEnd.y);
+    ctx.stroke();
+    ctx.restore();
+}
+
 function drawSignalHead(x, y, active, countdown, rightTurn = false) {
     ctx.save();
     ctx.translate(x, y);
@@ -255,14 +290,14 @@ function drawSignalHead(x, y, active, countdown, rightTurn = false) {
     ctx.fillStyle   = "rgba(10,18,35,0.92)";
     ctx.strokeStyle = "rgba(148,163,184,0.35)";
     ctx.lineWidth   = 1;
-    roundedRectPath(ctx, -10, -21, 20, 46, 7);
+    roundedRectPath(ctx, -11, -23, 22, 50, 7);
     ctx.fill();
     ctx.stroke();
 
     // 三色灯
     const colorNames = ["red", "yellow", "green"];
     const hexColors  = { red: "#ef4444", yellow: "#facc15", green: "#22c55e" };
-    const yPos       = [-11, 0, 11];
+    const yPos       = [-12, 0, 12];
 
     for (let i = 0; i < 3; i++) {
         const name = colorNames[i];
@@ -275,7 +310,7 @@ function drawSignalHead(x, y, active, countdown, rightTurn = false) {
         } else {
             ctx.shadowBlur = 0;
         }
-        ctx.arc(0, yPos[i], 4.2, 0, Math.PI * 2);
+        ctx.arc(0, yPos[i], 4.6, 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.shadowBlur = 0;
@@ -285,11 +320,11 @@ function drawSignalHead(x, y, active, countdown, rightTurn = false) {
     if (countdown !== null && !rightTurn) {
         ctx.fillStyle = "#dbeafe";
         ctx.font      = "bold 8px sans-serif";
-        ctx.fillText(`${Math.ceil(countdown)}`, 0, 22);
+        ctx.fillText(`${Math.ceil(countdown)}`, 0, 24);
     } else if (rightTurn) {
         ctx.fillStyle = "#a7f3d0";
         ctx.font      = "7px sans-serif";
-        ctx.fillText("RT", 0, 22);
+        ctx.fillText("RT", 0, 24);
     }
     ctx.restore();
 }
@@ -310,10 +345,12 @@ function drawQueueOverlays() {
             ? "rgba(239,68,68,0.28)"
             : "rgba(248,113,113,0.14)";
         ctx.beginPath();
-        const centerX = stop.x;
-        const centerY = stop.y;
-        const outerX = stop.x + side.x * (-CONFIG.laneWidthPx * 3);
-        const outerY = stop.y + side.y * (-CONFIG.laneWidthPx * 3);
+        const innerOffset = geometry.arms[arm].inboundBoundaryOffsets[0];
+        const centerX = stop.x + side.x * innerOffset;
+        const centerY = stop.y + side.y * innerOffset;
+        const outerOffset = geometry.arms[arm].inboundBoundaryOffsets[geometry.arms[arm].inboundBoundaryOffsets.length - 1];
+        const outerX = stop.x + side.x * outerOffset;
+        const outerY = stop.y + side.y * outerOffset;
         ctx.moveTo(centerX,                     centerY);
         ctx.lineTo(outerX,                      outerY);
         ctx.lineTo(outerX - dir.x * len,        outerY - dir.y * len);

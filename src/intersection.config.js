@@ -39,13 +39,14 @@ const PHASES = [
 ];
 
 const CONFIG = {
-    pixelPerMeter: 1.5,
+    pixelPerMeter: 1.6,
     center: { x: 550, y: 400 },   // 动态由 resizeCanvas 更新
-    stopLinePx: 60,                // 停车线距路口中心（像素）
+    stopLinePx: 74,                // 停车线距路口中心（像素）
     approachLengthM: 200,          // 进口道长度（米）
     exitLengthM: 200,              // 出口道长度（米）
-    laneWidthPx: 18,               // 单车道宽度（像素）
-    crosswalkWidthPx: 18,
+    laneWidthPx: 20,               // 单车道宽度（像素）
+    centerDividerPx: 10,           // 中央双黄线预留带宽（像素）
+    crosswalkWidthPx: 20,
     yellowTime: 3,                 // 黄灯时长（s）
     allRedTime: 1,                 // 全红时长（s）
     crossingSpeed: 8,              // 通过路口速度（m/s）
