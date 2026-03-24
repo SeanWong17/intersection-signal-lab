@@ -22,7 +22,7 @@ function drawBackground() {
 // ── 路面 ──────────────────────────────────────────────────────────────────────
 
 function getRoadHalfWidthPx() {
-    return CONFIG.laneWidthPx * 3.1;
+    return CONFIG.laneWidthPx * 3.25;
 }
 
 function drawRoadSurface() {
@@ -52,16 +52,49 @@ function drawMarkings() {
     const roadHalf = getRoadHalfWidthPx() - CONFIG.laneWidthPx * 0.15;
 
     ctx.save();
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.2;
     ctx.setLineDash([]);
 
     for (const arm of DIRS) {
         const armGeo = geometry.arms[arm];
-        ctx.strokeStyle = "rgba(255,255,255,0.58)";
-        for (const offset of armGeo.boundaryOffsets) {
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+
+        for (const offset of armGeo.inboundBoundaryOffsets.slice(1)) {
             const p1 = {
                 x: armGeo.inboundFar.x  + armGeo.side.x * offset,
                 y: armGeo.inboundFar.y  + armGeo.side.y * offset,
+            };
+            const p2 = {
+                x: armGeo.approachAnchor.x + armGeo.side.x * offset,
+                y: armGeo.approachAnchor.y + armGeo.side.y * offset,
+            };
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+
+        for (const offset of armGeo.outboundBoundaryOffsets.slice(1)) {
+            const p1 = {
+                x: armGeo.approachAnchor.x + armGeo.side.x * offset,
+                y: armGeo.approachAnchor.y + armGeo.side.y * offset,
+            };
+            const p2 = {
+                x: armGeo.outboundFar.x + armGeo.side.x * offset,
+                y: armGeo.outboundFar.y + armGeo.side.y * offset,
+            };
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 1.6;
+        for (const offset of [-CONFIG.laneWidthPx * 3, CONFIG.laneWidthPx * 3]) {
+            const p1 = {
+                x: armGeo.inboundFar.x + armGeo.side.x * offset,
+                y: armGeo.inboundFar.y + armGeo.side.y * offset,
             };
             const p2 = {
                 x: armGeo.outboundFar.x + armGeo.side.x * offset,
@@ -74,7 +107,7 @@ function drawMarkings() {
         }
 
         ctx.strokeStyle = "rgba(251,191,36,0.88)";
-        ctx.lineWidth = 1.6;
+        ctx.lineWidth = 2;
         for (const offset of [-CONFIG.laneWidthPx * 0.12, CONFIG.laneWidthPx * 0.12]) {
             const p1 = {
                 x: armGeo.inboundFar.x + armGeo.side.x * offset,
@@ -271,19 +304,20 @@ function drawQueueOverlays() {
         const stop     = geometry.arms[arm].approachAnchor;
         const dir      = geometry.arms[arm].dir;
         const side     = geometry.arms[arm].side;
-        const halfW    = CONFIG.laneWidthPx * 1.55;
         const len      = queue.currentQueue * CONFIG.pixelPerMeter;
         ctx.save();
         ctx.fillStyle = queue.spillback
             ? "rgba(239,68,68,0.28)"
             : "rgba(248,113,113,0.14)";
         ctx.beginPath();
-        const x = stop.x - side.x * halfW;
-        const y = stop.y - side.y * halfW;
-        ctx.moveTo(x,                                   y);
-        ctx.lineTo(x + side.x * halfW * 2,             y + side.y * halfW * 2);
-        ctx.lineTo(x + side.x * halfW * 2 - dir.x * len, y + side.y * halfW * 2 - dir.y * len);
-        ctx.lineTo(x - dir.x * len,                    y - dir.y * len);
+        const centerX = stop.x;
+        const centerY = stop.y;
+        const outerX = stop.x + side.x * (-CONFIG.laneWidthPx * 3);
+        const outerY = stop.y + side.y * (-CONFIG.laneWidthPx * 3);
+        ctx.moveTo(centerX,                     centerY);
+        ctx.lineTo(outerX,                      outerY);
+        ctx.lineTo(outerX - dir.x * len,        outerY - dir.y * len);
+        ctx.lineTo(centerX - dir.x * len,       centerY - dir.y * len);
         ctx.closePath();
         ctx.fill();
         ctx.restore();

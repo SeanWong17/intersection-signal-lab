@@ -30,6 +30,14 @@ function getBoundaryOffsets() {
     return [-2, -1, 1, 2].map(value => value * CONFIG.laneWidthPx);
 }
 
+function getInboundBoundaryOffsets() {
+    return [0, -1, -2, -3].map(value => value * CONFIG.laneWidthPx);
+}
+
+function getOutboundBoundaryOffsets() {
+    return [0, 1, 2, 3].map(value => value * CONFIG.laneWidthPx);
+}
+
 function computeGeometry() {
     const c = CONFIG.center;
     const inner = CONFIG.stopLinePx;
@@ -37,6 +45,8 @@ function computeGeometry() {
     const exitLengthPx = CONFIG.exitLengthM * CONFIG.pixelPerMeter;
     const inboundLaneOffsets = getInboundLaneOffsets();
     const outboundLaneOffsets = getOutboundLaneOffsets();
+    const inboundBoundaryOffsets = getInboundBoundaryOffsets();
+    const outboundBoundaryOffsets = getOutboundBoundaryOffsets();
     const signalPullback = {
         left: 56,
         straight: 28,
@@ -68,6 +78,8 @@ function computeGeometry() {
             approachAnchor,
             inboundLaneOffsets,
             outboundLaneOffsets,
+            inboundBoundaryOffsets,
+            outboundBoundaryOffsets,
             boundaryOffsets: getBoundaryOffsets(),
         };
 
