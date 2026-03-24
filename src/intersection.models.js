@@ -9,6 +9,7 @@ class Vehicle {
         this.arm         = arm;
         this.turnIntent  = turnIntent;
         this.lane        = turnIntent;         // 初始车道与转向意图相同
+        this.exitLane    = turnIntent;
         this.segment     = "inbound";          // inbound | crossing | outbound | departed
         this.pos         = 0;                  // 沿臂位移（m），从远端往停车线递增
         this.vel         = random() * 2;
@@ -40,7 +41,7 @@ class Vehicle {
             return pointOnPath(this.crossingPath, this.crossingDistance);
         }
         if (this.segment === "outbound") {
-            return getLanePoint(TURN_TO_EXIT[this.arm][this.turnIntent], "straight", this.pos, false);
+            return getLanePoint(TURN_TO_EXIT[this.arm][this.turnIntent], this.exitLane, this.pos, false);
         }
         return getLanePoint(this.arm, this.lane, this.pos, true);
     }

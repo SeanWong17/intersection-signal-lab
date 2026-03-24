@@ -10,17 +10,33 @@ const geometry = {
     pathCache: {},
 };
 
+function getInboundLaneOffsets() {
+    return {
+        left: -CONFIG.laneWidthPx * 0.5,
+        straight: -CONFIG.laneWidthPx * 1.5,
+        right: -CONFIG.laneWidthPx * 2.5,
+    };
+}
+
+function getOutboundLaneOffsets() {
+    return {
+        left: CONFIG.laneWidthPx * 0.5,
+        straight: CONFIG.laneWidthPx * 1.5,
+        right: CONFIG.laneWidthPx * 2.5,
+    };
+}
+
+function getBoundaryOffsets() {
+    return [-2, -1, 1, 2].map(value => value * CONFIG.laneWidthPx);
+}
+
 function computeGeometry() {
     const c = CONFIG.center;
     const inner = CONFIG.stopLinePx;
     const armLengthPx = CONFIG.approachLengthM * CONFIG.pixelPerMeter;
     const exitLengthPx = CONFIG.exitLengthM * CONFIG.pixelPerMeter;
-    // 车道横向偏移：左转道在中心线左侧，直行居中，右转在右侧
-    const laneOffsets = {
-        left:     CONFIG.laneWidthPx,
-        straight: 0,
-        right:   -CONFIG.laneWidthPx,
-    };
+    const inboundLaneOffsets = getInboundLaneOffsets();
+    const outboundLaneOffsets = getOutboundLaneOffsets();
     const signalPullback = {
         left: 56,
         straight: 28,
@@ -31,7 +47,7 @@ function computeGeometry() {
         const dir  = DIR_VECTORS[arm];
         const side = SIDE_VECTORS[arm];
 
-        const inboundStop = {
+        const approachAnchor = {
             x: c.x + dir.x * inner,
             y: c.y + dir.y * inner,
         };
@@ -39,36 +55,41 @@ function computeGeometry() {
             x: c.x + dir.x * (inner + armLengthPx),
             y: c.y + dir.y * (inner + armLengthPx),
         };
-        const outboundNear = {
-            x: c.x + dir.x * inner,
-            y: c.y + dir.y * inner,
-        };
         const outboundFar = {
             x: c.x + dir.x * (inner + exitLengthPx),
             y: c.y + dir.y * (inner + exitLengthPx),
         };
 
-        geometry.arms[arm] = { dir, side, inboundStop, inboundFar, outboundNear, outboundFar, laneOffsets };
+        geometry.arms[arm] = {
+            dir,
+            side,
+            inboundFar,
+            outboundFar,
+            approachAnchor,
+            inboundLaneOffsets,
+            outboundLaneOffsets,
+            boundaryOffsets: getBoundaryOffsets(),
+        };
 
         for (const lane of ["left", "straight", "right"]) {
-            const offset = laneOffsets[lane];
+            const offset = inboundLaneOffsets[lane];
             geometry.stopLines[laneId(arm, lane)] = {
                 a: {
-                    x: inboundStop.x + side.x * (offset - CONFIG.laneWidthPx * 0.45),
-                    y: inboundStop.y + side.y * (offset - CONFIG.laneWidthPx * 0.45),
+                    x: approachAnchor.x + side.x * (offset - CONFIG.laneWidthPx * 0.45),
+                    y: approachAnchor.y + side.y * (offset - CONFIG.laneWidthPx * 0.45),
                 },
                 b: {
-                    x: inboundStop.x + side.x * (offset + CONFIG.laneWidthPx * 0.45),
-                    y: inboundStop.y + side.y * (offset + CONFIG.laneWidthPx * 0.45),
+                    x: approachAnchor.x + side.x * (offset + CONFIG.laneWidthPx * 0.45),
+                    y: approachAnchor.y + side.y * (offset + CONFIG.laneWidthPx * 0.45),
                 },
                 point: {
-                    x: inboundStop.x + side.x * offset,
-                    y: inboundStop.y + side.y * offset,
+                    x: approachAnchor.x + side.x * offset,
+                    y: approachAnchor.y + side.y * offset,
                 },
             };
             geometry.signalHeads[laneId(arm, lane)] = {
-                x: inboundStop.x + side.x * offset - dir.x * signalPullback[lane],
-                y: inboundStop.y + side.y * offset - dir.y * signalPullback[lane],
+                x: approachAnchor.x + side.x * offset - dir.x * signalPullback[lane],
+                y: approachAnchor.y + side.y * offset - dir.y * signalPullback[lane],
             };
         }
     }
@@ -90,9 +111,9 @@ function computeGeometry() {
 
 function getLanePoint(arm, lane, posMeters, inbound = true) {
     const armGeo = geometry.arms[arm];
-    const offset = armGeo.laneOffsets[lane];
+    const offset = inbound ? armGeo.inboundLaneOffsets[lane] : armGeo.outboundLaneOffsets[lane];
     const dir    = inbound ? { x: -armGeo.dir.x, y: -armGeo.dir.y } : armGeo.dir;
-    const base   = inbound ? armGeo.inboundFar : armGeo.outboundNear;
+    const base   = inbound ? armGeo.inboundFar : armGeo.approachAnchor;
     const posPx  = posMeters * CONFIG.pixelPerMeter;
     return {
         x: base.x + armGeo.side.x * offset + dir.x * posPx,
@@ -131,13 +152,14 @@ function sampleArcLength(points) {
 }
 
 function buildCrossingPath(arm, turn) {
-    const startLane = turn === "right" ? "right" : turn;
+    const startLane = turn;
     const start   = geometry.stopLines[laneId(arm, startLane)].point;
     const exitArm = TURN_TO_EXIT[arm][turn];
     const exitGeo = geometry.arms[exitArm];
+    const exitLane = turn;
     const end = {
-        x: exitGeo.outboundNear.x + exitGeo.side.x * exitGeo.laneOffsets["straight"],
-        y: exitGeo.outboundNear.y + exitGeo.side.y * exitGeo.laneOffsets["straight"],
+        x: exitGeo.approachAnchor.x + exitGeo.side.x * exitGeo.outboundLaneOffsets[exitLane],
+        y: exitGeo.approachAnchor.y + exitGeo.side.y * exitGeo.outboundLaneOffsets[exitLane],
     };
     const center = CONFIG.center;
     const armGeo = geometry.arms[arm];

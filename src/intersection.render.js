@@ -22,7 +22,7 @@ function drawBackground() {
 // ── 路面 ──────────────────────────────────────────────────────────────────────
 
 function getRoadHalfWidthPx() {
-    return CONFIG.laneWidthPx * 1.9;
+    return CONFIG.laneWidthPx * 3.1;
 }
 
 function drawRoadSurface() {
@@ -51,27 +51,14 @@ function drawMarkings() {
     const c        = CONFIG.center;
     const roadHalf = getRoadHalfWidthPx() - CONFIG.laneWidthPx * 0.15;
 
-    // 黄色中心线（虚线）
     ctx.save();
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([10, 8]);
-    ctx.strokeStyle = "rgba(251,191,36,0.85)";
-    ctx.beginPath();
-    ctx.moveTo(c.x, c.y - CONFIG.stopLinePx - CONFIG.approachLengthM * CONFIG.pixelPerMeter);
-    ctx.lineTo(c.x, c.y + CONFIG.stopLinePx + CONFIG.exitLengthM    * CONFIG.pixelPerMeter);
-    ctx.moveTo(c.x - CONFIG.stopLinePx - CONFIG.approachLengthM * CONFIG.pixelPerMeter, c.y);
-    ctx.lineTo(c.x + CONFIG.stopLinePx + CONFIG.exitLengthM    * CONFIG.pixelPerMeter, c.y);
-    ctx.stroke();
-    ctx.restore();
-
-    // 白色车道边界线
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
-    ctx.lineWidth   = 1;
+    ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    const boundaryOffsets = [-1.5, -0.5, 0.5, 1.5].map(item => item * CONFIG.laneWidthPx);
+
     for (const arm of DIRS) {
         const armGeo = geometry.arms[arm];
-        for (const offset of boundaryOffsets) {
+        ctx.strokeStyle = "rgba(255,255,255,0.58)";
+        for (const offset of armGeo.boundaryOffsets) {
             const p1 = {
                 x: armGeo.inboundFar.x  + armGeo.side.x * offset,
                 y: armGeo.inboundFar.y  + armGeo.side.y * offset,
@@ -85,7 +72,26 @@ function drawMarkings() {
             ctx.lineTo(p2.x, p2.y);
             ctx.stroke();
         }
+
+        ctx.strokeStyle = "rgba(251,191,36,0.88)";
+        ctx.lineWidth = 1.6;
+        for (const offset of [-CONFIG.laneWidthPx * 0.12, CONFIG.laneWidthPx * 0.12]) {
+            const p1 = {
+                x: armGeo.inboundFar.x + armGeo.side.x * offset,
+                y: armGeo.inboundFar.y + armGeo.side.y * offset,
+            };
+            const p2 = {
+                x: armGeo.outboundFar.x + armGeo.side.x * offset,
+                y: armGeo.outboundFar.y + armGeo.side.y * offset,
+            };
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+        ctx.lineWidth = 1;
     }
+    ctx.restore();
 
     // 停车线（实白线）
     ctx.lineWidth   = 3;
@@ -262,7 +268,7 @@ function drawQueueOverlays() {
     for (const arm of DIRS) {
         const queue = state.queueDetectors[arm];
         if (queue.currentQueue <= 0.5) continue;
-        const stop     = geometry.arms[arm].inboundStop;
+        const stop     = geometry.arms[arm].approachAnchor;
         const dir      = geometry.arms[arm].dir;
         const side     = geometry.arms[arm].side;
         const halfW    = CONFIG.laneWidthPx * 1.55;
