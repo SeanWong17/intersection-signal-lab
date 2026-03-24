@@ -21,9 +21,13 @@ function drawBackground() {
 
 // ── 路面 ──────────────────────────────────────────────────────────────────────
 
+function getRoadHalfWidthPx() {
+    return CONFIG.laneWidthPx * 1.9;
+}
+
 function drawRoadSurface() {
     const c = CONFIG.center;
-    const roadHalf = CONFIG.laneWidthPx * 3.4;
+    const roadHalf = getRoadHalfWidthPx();
     const armLen   = CONFIG.approachLengthM * CONFIG.pixelPerMeter;
     const exitLen  = CONFIG.exitLengthM     * CONFIG.pixelPerMeter;
 
@@ -45,7 +49,7 @@ function drawRoadSurface() {
 
 function drawMarkings() {
     const c        = CONFIG.center;
-    const roadHalf = CONFIG.laneWidthPx * 3.2;
+    const roadHalf = getRoadHalfWidthPx() - CONFIG.laneWidthPx * 0.15;
 
     // 黄色中心线（虚线）
     ctx.save();
@@ -60,14 +64,14 @@ function drawMarkings() {
     ctx.stroke();
     ctx.restore();
 
-    // 白色车道线
+    // 白色车道边界线
     ctx.strokeStyle = "rgba(255,255,255,0.7)";
     ctx.lineWidth   = 1;
     ctx.setLineDash([]);
+    const boundaryOffsets = [-1.5, -0.5, 0.5, 1.5].map(item => item * CONFIG.laneWidthPx);
     for (const arm of DIRS) {
         const armGeo = geometry.arms[arm];
-        for (const lane of ["left", "straight", "right"]) {
-            const offset = armGeo.laneOffsets[lane] - CONFIG.laneWidthPx * 0.5;
+        for (const offset of boundaryOffsets) {
             const p1 = {
                 x: armGeo.inboundFar.x  + armGeo.side.x * offset,
                 y: armGeo.inboundFar.y  + armGeo.side.y * offset,
@@ -112,6 +116,81 @@ function drawCrosswalk(x, y, w, h, orientation) {
             ctx.fillRect(x, y + i * (h / stripes), w, h / (stripes * 1.8));
         }
     }
+}
+
+function drawLaneDirectionArrows() {
+    ctx.save();
+    ctx.strokeStyle = "rgba(241,245,249,0.7)";
+    ctx.fillStyle = "rgba(241,245,249,0.82)";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    for (const arm of DIRS) {
+        const armGeo = geometry.arms[arm];
+        const inboundDir = { x: -armGeo.dir.x, y: -armGeo.dir.y };
+        const arrowOriginDistance = 26;
+
+        for (const lane of ["left", "straight", "right"]) {
+            const stopPoint = geometry.stopLines[laneId(arm, lane)].point;
+            const start = {
+                x: stopPoint.x + armGeo.dir.x * arrowOriginDistance,
+                y: stopPoint.y + armGeo.dir.y * arrowOriginDistance,
+            };
+
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+
+            if (lane === "straight") {
+                const end = {
+                    x: start.x + inboundDir.x * 18,
+                    y: start.y + inboundDir.y * 18,
+                };
+                ctx.lineTo(end.x, end.y);
+                ctx.stroke();
+                drawArrowHead(end, inboundDir, armGeo.side, 6);
+                continue;
+            }
+
+            const bendSign = lane === "left" ? 1 : -1;
+            const mid = {
+                x: start.x + inboundDir.x * 10,
+                y: start.y + inboundDir.y * 10,
+            };
+            const end = {
+                x: mid.x + armGeo.side.x * bendSign * 12,
+                y: mid.y + armGeo.side.y * bendSign * 12,
+            };
+            const control = {
+                x: start.x + inboundDir.x * 16,
+                y: start.y + inboundDir.y * 16,
+            };
+            ctx.quadraticCurveTo(control.x, control.y, end.x, end.y);
+            ctx.stroke();
+            const tangent = {
+                x: inboundDir.x * 0.7 + armGeo.side.x * bendSign * 0.7,
+                y: inboundDir.y * 0.7 + armGeo.side.y * bendSign * 0.7,
+            };
+            drawArrowHead(end, tangent, armGeo.side, 6);
+        }
+    }
+
+    ctx.restore();
+}
+
+function drawArrowHead(point, direction, side, size) {
+    const mag = Math.hypot(direction.x, direction.y) || 1;
+    const dx = direction.x / mag;
+    const dy = direction.y / mag;
+    const px = -dy;
+    const py = dx;
+
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+    ctx.lineTo(point.x - dx * size + px * size * 0.55, point.y - dy * size + py * size * 0.55);
+    ctx.lineTo(point.x - dx * size - px * size * 0.55, point.y - dy * size - py * size * 0.55);
+    ctx.closePath();
+    ctx.fill();
 }
 
 // ── 信号灯 ────────────────────────────────────────────────────────────────────
@@ -186,7 +265,7 @@ function drawQueueOverlays() {
         const stop     = geometry.arms[arm].inboundStop;
         const dir      = geometry.arms[arm].dir;
         const side     = geometry.arms[arm].side;
-        const halfW    = CONFIG.laneWidthPx * 2.8;
+        const halfW    = CONFIG.laneWidthPx * 1.55;
         const len      = queue.currentQueue * CONFIG.pixelPerMeter;
         ctx.save();
         ctx.fillStyle = queue.spillback
@@ -432,6 +511,7 @@ function draw() {
     drawBackground();
     drawRoadSurface();
     drawMarkings();
+    drawLaneDirectionArrows();
     drawSignals();
     drawQueueOverlays();
     drawGreenWaveGuides();

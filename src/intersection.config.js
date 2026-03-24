@@ -24,10 +24,10 @@ const SIDE_VECTORS = {
 };
 
 const TURN_TO_EXIT = {
-    N: { left: "W", straight: "S", right: "E" },
-    E: { left: "N", straight: "W", right: "S" },
-    S: { left: "E", straight: "N", right: "W" },
-    W: { left: "S", straight: "E", right: "N" },
+    N: { left: "E", straight: "S", right: "W" },
+    E: { left: "S", straight: "W", right: "N" },
+    S: { left: "W", straight: "N" , right: "E" },
+    W: { left: "N", straight: "E", right: "S" },
 };
 
 // 四相位：每相位对应一条臂的直行+左转

@@ -17,9 +17,9 @@ function computeGeometry() {
     const exitLengthPx = CONFIG.exitLengthM * CONFIG.pixelPerMeter;
     // 车道横向偏移：左转道在中心线左侧，直行居中，右转在右侧
     const laneOffsets = {
-        left:     -CONFIG.laneWidthPx * 0.5,
-        straight:  CONFIG.laneWidthPx * 0.5,
-        right:     CONFIG.laneWidthPx * 1.5,
+        left:     CONFIG.laneWidthPx,
+        straight: 0,
+        right:   -CONFIG.laneWidthPx,
     };
     const signalPullback = {
         left: 56,
@@ -32,12 +32,12 @@ function computeGeometry() {
         const side = SIDE_VECTORS[arm];
 
         const inboundStop = {
-            x: c.x - dir.x * inner,
-            y: c.y - dir.y * inner,
+            x: c.x + dir.x * inner,
+            y: c.y + dir.y * inner,
         };
         const inboundFar = {
-            x: c.x - dir.x * (inner + armLengthPx),
-            y: c.y - dir.y * (inner + armLengthPx),
+            x: c.x + dir.x * (inner + armLengthPx),
+            y: c.y + dir.y * (inner + armLengthPx),
         };
         const outboundNear = {
             x: c.x + dir.x * inner,
@@ -91,7 +91,7 @@ function computeGeometry() {
 function getLanePoint(arm, lane, posMeters, inbound = true) {
     const armGeo = geometry.arms[arm];
     const offset = armGeo.laneOffsets[lane];
-    const dir    = armGeo.dir;
+    const dir    = inbound ? { x: -armGeo.dir.x, y: -armGeo.dir.y } : armGeo.dir;
     const base   = inbound ? armGeo.inboundFar : armGeo.outboundNear;
     const posPx  = posMeters * CONFIG.pixelPerMeter;
     return {

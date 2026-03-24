@@ -4,7 +4,7 @@
 // ── 全局仿真状态 ───────────────────────────────────────────────────────────────
 
 const state = {
-    running:    true,
+    running:    false,
     simTime:    0,
     lastFrame:  0,
     accumulator: 0,
