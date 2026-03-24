@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>十字路口交通仿真系统</title>
+    <title>十字路口交通信号教学仿真</title>
     <link rel="stylesheet" href="./src/intersection.css">
 </head>
 <body>
 
     <!-- ── 仿真画布区域 ─────────────────────────────────────────── -->
     <div id="canvas-wrap">
-        <canvas id="simCanvas"></canvas>
+        <canvas id="simCanvas" aria-label="Intersection traffic signal teaching simulation canvas">Your browser does not support the simulation canvas.</canvas>
     </div>
 
     <!-- ── 右侧控制面板 ────────────────────────────────────────── -->
@@ -21,11 +21,11 @@
             <div class="panel-header-top">
                 <div class="panel-title">
                     <span class="panel-icon">🚦</span>
-                    <span id="panelTitle">十字路口信号控制仿真</span>
+                    <span id="panelTitle">十字路口信号控制教学仿真</span>
                 </div>
                 <button id="btnLang" class="btn-ghost btn-lang" title="Switch language">EN</button>
             </div>
-            <p id="panelIntro" class="intro">四相位保护左转 · IDM 跟驰 · Webster 优化 · 过饱和与绿波演示</p>
+            <p id="panelIntro" class="intro">四相位保护左转 · IDM 跟驰 · Webster 配时建议 · 过饱和与绿波演示</p>
         </header>
 
         <!-- 播放控制条 -->
@@ -54,7 +54,7 @@
                 </div>
                 <div class="metric-cell">
                     <div id="saturationDisplay" class="metric-value">0</div>
-                    <div id="saturationMetricLabel" class="metric-label">实测饱和流率</div>
+                    <div id="saturationMetricLabel" class="metric-label">排队启动流率</div>
                 </div>
             </div>
 
@@ -96,7 +96,7 @@
         <section class="card">
             <div class="card-header">
                 <span id="signalHeader">信号配时</span>
-                <button id="btnWebster" class="btn-inline"><span class="btn-icon">✦</span><span id="btnWebsterLabel">Webster 优化</span></button>
+                <button id="btnWebster" class="btn-inline"><span class="btn-icon">✦</span><span id="btnWebsterLabel">Webster 配时</span></button>
             </div>
             <div class="slider-group">
                 <div class="slider-row">
@@ -167,7 +167,7 @@
                 <label class="toggle-row">
                     <input id="showSat"       type="checkbox" checked>
                     <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                    <span id="showSatLabel">饱和流率标注</span>
+                    <span id="showSatLabel">启动流率标注</span>
                 </label>
                 <label class="toggle-row">
                     <input id="showSpaceTime" type="checkbox" checked>
@@ -188,6 +188,7 @@
 
     <!-- 脚本：按依赖顺序加载 -->
     <script src="./src/intersection.config.js"></script>
+    <script src="./src/intersection.analytics.js"></script>
     <script src="./src/intersection.i18n.js"></script>
     <script src="./src/intersection.geometry.js"></script>
     <script src="./src/intersection.models.js"></script>

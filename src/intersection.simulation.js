@@ -185,6 +185,9 @@ function updateInboundVehicles(dt) {
         for (const vehicle of laneVehicles) {
             const leader = getLeader(vehicle, laneVehicles);
             computeIDM(vehicle, leader, dt);
+            if (CONFIG.approachLengthM - vehicle.pos < 15 && vehicle.vel < 0.5) {
+                vehicle.wasQueued = true;
+            }
             if (vehicle.pos >= CONFIG.approachLengthM) {
                 if (vehicle.arrivalTime === null) vehicle.arrivalTime = state.simTime;
                 if (state.signal.isLanePermitted(vehicle) && canEnterIntersection(vehicle)) {
@@ -192,10 +195,13 @@ function updateInboundVehicles(dt) {
                     vehicle.crossingDistance = 0;
                     vehicle.vel             = clamp(vehicle.vel, 3, CONFIG.crossingSpeed);
                     reserveIntersection(vehicle);
-                    state.performance.recordSaturation(state.simTime);
+                    if (vehicle.wasQueued) {
+                        state.performance.recordQueuedDischarge(vehicle.laneKey, state.simTime);
+                    }
                 } else {
                     vehicle.pos = CONFIG.approachLengthM - 0.1;
                     vehicle.vel = 0;
+                    vehicle.wasQueued = true;
                 }
             }
         }
@@ -262,6 +268,7 @@ function resetSimulation() {
     state.demo.oversat   = false;
     state.demo.greenWave = false;
     state.performance    = new PerformanceMonitor();
+    resetRandomSeed();
     for (const arm of DIRS) state.queueDetectors[arm] = new QueueDetector(arm);
     state.signal = new TrafficSignal();
     applySignalSettings();

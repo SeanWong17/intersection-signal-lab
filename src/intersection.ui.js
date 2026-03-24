@@ -133,18 +133,18 @@ function applySignalSettings() {
 // ── Webster 一键优化 ───────────────────────────────────────────────────────────
 
 function runWebsterOptimization() {
-    const L              = 4 * PHASES.length;                     // 总损失时间（s）
-    const throughputShare = state.laneShares.left + state.laneShares.straight;
-    const criticalFlows  = DIRS.map(arm => state.armFlow[arm] * throughputShare);
-    const Y              = criticalFlows.map(q => q / CONFIG.satFlowPerLane);
-    const Ysum           = clamp(Y.reduce((a, b) => a + b, 0), 0.01, 0.92);
-    const Copt           = clamp(Math.ceil((1.5 * L + 5) / (1 - Ysum)), 30, 120);
-    const effectiveGreen = Math.max(Copt - L, 24);
-    const greens         = Y.map(y => Math.max(8, Math.round((effectiveGreen * y) / Ysum)));
-    const adjustedCycle  = greens.reduce((a, b) => a + b, 0) + L;
+    const bounds = getGreenBounds();
+    const plan = computeWebsterPlan(state.armFlow, state.laneShares, {
+        satFlowPerLane: CONFIG.satFlowPerLane,
+        lostTimePerPhase: CONFIG.yellowTime + CONFIG.allRedTime,
+        minCycle: parseFloat(ui.cycle.min),
+        maxCycle: parseFloat(ui.cycle.max),
+        minGreen: Math.min(...bounds.map(item => item.min)),
+        maxGreen: Math.max(...bounds.map(item => item.max)),
+    });
 
-    setSlider(ui.cycle, ui.cycleValue, adjustedCycle);
-    greens.forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+    setSlider(ui.cycle, ui.cycleValue, plan.adjustedCycle);
+    plan.greens.forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
     syncCycleFromGreens();
     applySignalSettings();
 
@@ -152,11 +152,11 @@ function runWebsterOptimization() {
         type: "webster",
         messageKey: "overlay.webster",
         messageParams: {
-            cycle: adjustedCycle,
-            north: greens[0],
-            south: greens[1],
-            east: greens[2],
-            west: greens[3]
+            cycle: plan.adjustedCycle,
+            north: plan.greens[0],
+            south: plan.greens[1],
+            east: plan.greens[2],
+            west: plan.greens[3]
         },
         ttl:  5
     });

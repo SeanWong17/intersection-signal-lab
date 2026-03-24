@@ -11,7 +11,7 @@ class Vehicle {
         this.lane        = turnIntent;         // 初始车道与转向意图相同
         this.segment     = "inbound";          // inbound | crossing | outbound | departed
         this.pos         = 0;                  // 沿臂位移（m），从远端往停车线递增
-        this.vel         = Math.random() * 2;
+        this.vel         = random() * 2;
         this.acc         = 0;
 
         // 车辆参数（高斯个体差异）
@@ -28,6 +28,7 @@ class Vehicle {
         this.arrivalTime      = null;
         this.departureTime    = null;
         this.spawnTime        = spawnTime;
+        this.wasQueued        = false;
     }
 
     get laneKey() {
@@ -236,7 +237,8 @@ class PerformanceMonitor {
     constructor() {
         this.delaySamples    = [];
         this.departed        = [];
-        this.phaseDepartures = [];
+        this.queuedHeadways  = [];
+        this.lastQueuedDepartureByLane = {};
         this.lastLOS         = losFromDelay(0);
     }
 
@@ -250,10 +252,17 @@ class PerformanceMonitor {
         while (this.departed.length && simTime - this.departed[0].t > 3600) this.departed.shift();
     }
 
-    recordSaturation(simTime) {
-        this.phaseDepartures.push(simTime);
-        while (this.phaseDepartures.length && simTime - this.phaseDepartures[0] > 30) {
-            this.phaseDepartures.shift();
+    recordQueuedDischarge(laneKey, simTime) {
+        const previous = this.lastQueuedDepartureByLane[laneKey];
+        this.lastQueuedDepartureByLane[laneKey] = simTime;
+        if (typeof previous !== "number") return;
+
+        const headway = simTime - previous;
+        if (headway < 0.8 || headway > 5) return;
+
+        this.queuedHeadways.push({ t: simTime, headway, laneKey });
+        while (this.queuedHeadways.length && simTime - this.queuedHeadways[0].t > 300) {
+            this.queuedHeadways.shift();
         }
     }
 
@@ -269,8 +278,6 @@ class PerformanceMonitor {
     }
 
     getMeasuredSaturation() {
-        if (this.phaseDepartures.length < 2) return 0;
-        const dur = this.phaseDepartures[this.phaseDepartures.length - 1] - this.phaseDepartures[0];
-        return dur <= 0 ? 0 : (this.phaseDepartures.length / dur) * 3600;
+        return estimateLaneSaturationFromHeadways(this.queuedHeadways.map(sample => sample.headway));
     }
 }

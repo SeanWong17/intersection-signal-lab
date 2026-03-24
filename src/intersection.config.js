@@ -2,6 +2,13 @@
 
 const DIRS = ["N", "E", "S", "W"];
 
+function readInitialSeed() {
+    if (typeof location === "undefined" || !location.search) return 20260324;
+    const params = new URLSearchParams(location.search);
+    const value = Number.parseInt(params.get("seed") || "", 10);
+    return Number.isFinite(value) ? value : 20260324;
+}
+
 const DIR_VECTORS = {
     N: { x: 0, y: -1 },
     E: { x: 1,  y: 0 },
@@ -49,9 +56,51 @@ const CONFIG = {
     ghostLength: 0,
     speedColorMin: 0,              // 速度→颜色 HSL 色相范围
     speedColorMax: 120,
+    randomSeed: readInitialSeed(),
 };
 
 // ─── 工具函数 ──────────────────────────────────────────────────────────────────
+
+const randomState = {
+    baseSeed: 0,
+    generator: null,
+};
+
+function normalizeSeed(seed) {
+    const value = Number(seed);
+    if (!Number.isFinite(value)) return 1;
+    return (Math.abs(Math.trunc(value)) >>> 0) || 1;
+}
+
+function mulberry32(seed) {
+    let state = seed >>> 0;
+    return function next() {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function setRandomSeed(seed) {
+    randomState.baseSeed = normalizeSeed(seed);
+    randomState.generator = mulberry32(randomState.baseSeed);
+    CONFIG.randomSeed = randomState.baseSeed;
+    return randomState.baseSeed;
+}
+
+function resetRandomSeed() {
+    return setRandomSeed(CONFIG.randomSeed);
+}
+
+function getRandomSeed() {
+    return CONFIG.randomSeed;
+}
+
+function random() {
+    if (!randomState.generator) resetRandomSeed();
+    return randomState.generator();
+}
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -63,14 +112,14 @@ function lerp(a, b, t) {
 
 function randn(mean, sd) {
     let u = 0, v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
+    while (u === 0) u = random();
+    while (v === 0) v = random();
     return mean + Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) * sd;
 }
 
 function expSample(rate) {
     if (rate <= 0) return Number.POSITIVE_INFINITY;
-    return -Math.log(Math.max(1e-6, Math.random())) / rate;
+    return -Math.log(Math.max(1e-6, random())) / rate;
 }
 
 function speedToColor(speed, v0) {
@@ -106,3 +155,5 @@ function laneId(arm, lane) {
 function formatMeters(m) {
     return `${Math.round(m)}m`;
 }
+
+resetRandomSeed();
