@@ -21,6 +21,11 @@ function computeGeometry() {
         straight:  CONFIG.laneWidthPx * 0.5,
         right:     CONFIG.laneWidthPx * 1.5,
     };
+    const signalPullback = {
+        left: 56,
+        straight: 28,
+        right: 0,
+    };
 
     for (const arm of DIRS) {
         const dir  = DIR_VECTORS[arm];
@@ -62,8 +67,8 @@ function computeGeometry() {
                 },
             };
             geometry.signalHeads[laneId(arm, lane)] = {
-                x: inboundStop.x + side.x * offset - dir.x * 18,
-                y: inboundStop.y + side.y * offset - dir.y * 18,
+                x: inboundStop.x + side.x * offset - dir.x * signalPullback[lane],
+                y: inboundStop.y + side.y * offset - dir.y * signalPullback[lane],
             };
         }
     }

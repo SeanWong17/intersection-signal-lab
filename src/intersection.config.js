@@ -43,7 +43,7 @@ const CONFIG = {
     center: { x: 550, y: 400 },   // 动态由 resizeCanvas 更新
     stopLinePx: 60,                // 停车线距路口中心（像素）
     approachLengthM: 200,          // 进口道长度（米）
-    exitLengthM: 120,              // 出口道长度（米）
+    exitLengthM: 200,              // 出口道长度（米）
     laneWidthPx: 18,               // 单车道宽度（像素）
     crosswalkWidthPx: 18,
     yellowTime: 3,                 // 黄灯时长（s）

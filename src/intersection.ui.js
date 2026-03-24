@@ -279,7 +279,7 @@ function resizeCanvas() {
     const rect        = document.getElementById("canvas-wrap").getBoundingClientRect();
     canvas.width      = rect.width;
     canvas.height     = rect.height;
-    CONFIG.center.x   = Math.max(380, rect.width * 0.5);
+    CONFIG.center.x   = rect.width * 0.5;
     CONFIG.center.y   = rect.height * 0.5;
     computeGeometry();
     refreshVehicleGeometry();

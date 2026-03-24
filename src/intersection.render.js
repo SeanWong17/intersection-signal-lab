@@ -30,7 +30,7 @@ function drawRoadSurface() {
     ctx.fillStyle = state.demo.oversat ? "#3a3a3a" : "#374151";
     // 南北走廊
     ctx.fillRect(c.x - roadHalf, c.y - CONFIG.stopLinePx - armLen,
-                 roadHalf * 2, armLen + CONFIG.stopLinePx + exitLen);
+                 roadHalf * 2, armLen + CONFIG.stopLinePx * 2 + exitLen);
     // 东西走廊（跨越中心）
     ctx.fillRect(c.x - CONFIG.stopLinePx - armLen, c.y - roadHalf,
                  armLen + CONFIG.stopLinePx * 2 + exitLen, roadHalf * 2);
@@ -67,7 +67,7 @@ function drawMarkings() {
     for (const arm of DIRS) {
         const armGeo = geometry.arms[arm];
         for (const lane of ["left", "straight", "right"]) {
-            const offset = armGeo.laneOffsets[lane] - CONFIG.laneWidthPx;
+            const offset = armGeo.laneOffsets[lane] - CONFIG.laneWidthPx * 0.5;
             const p1 = {
                 x: armGeo.inboundFar.x  + armGeo.side.x * offset,
                 y: armGeo.inboundFar.y  + armGeo.side.y * offset,
@@ -137,14 +137,14 @@ function drawSignalHead(x, y, active, countdown, rightTurn = false) {
     ctx.fillStyle   = "rgba(10,18,35,0.92)";
     ctx.strokeStyle = "rgba(148,163,184,0.35)";
     ctx.lineWidth   = 1;
-    roundedRectPath(ctx, -12, -24, 24, 52, 8);
+    roundedRectPath(ctx, -10, -21, 20, 46, 7);
     ctx.fill();
     ctx.stroke();
 
     // 三色灯
     const colorNames = ["red", "yellow", "green"];
     const hexColors  = { red: "#ef4444", yellow: "#facc15", green: "#22c55e" };
-    const yPos       = [-12, 0, 12];
+    const yPos       = [-11, 0, 11];
 
     for (let i = 0; i < 3; i++) {
         const name = colorNames[i];
@@ -157,7 +157,7 @@ function drawSignalHead(x, y, active, countdown, rightTurn = false) {
         } else {
             ctx.shadowBlur = 0;
         }
-        ctx.arc(0, yPos[i], 5, 0, Math.PI * 2);
+        ctx.arc(0, yPos[i], 4.2, 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.shadowBlur = 0;
@@ -166,12 +166,12 @@ function drawSignalHead(x, y, active, countdown, rightTurn = false) {
     ctx.textAlign = "center";
     if (countdown !== null && !rightTurn) {
         ctx.fillStyle = "#dbeafe";
-        ctx.font      = "bold 9px sans-serif";
-        ctx.fillText(`${Math.ceil(countdown)}`, 0, 26);
+        ctx.font      = "bold 8px sans-serif";
+        ctx.fillText(`${Math.ceil(countdown)}`, 0, 22);
     } else if (rightTurn) {
         ctx.fillStyle = "#a7f3d0";
-        ctx.font      = "8px sans-serif";
-        ctx.fillText("RT", 0, 26);
+        ctx.font      = "7px sans-serif";
+        ctx.fillText("RT", 0, 22);
     }
     ctx.restore();
 }
@@ -219,12 +219,14 @@ function drawVehicles() {
     for (const vehicle of ordered) {
         const p        = vehicle.positionPoint;
         const angle    = vehicle.angle;
-        const lengthPx = vehicle.length * CONFIG.pixelPerMeter;
-        const widthPx  = vehicle.width  * CONFIG.pixelPerMeter * 1.25;
+        const lengthPx = vehicle.length * CONFIG.pixelPerMeter * 1.45;
+        const widthPx  = vehicle.width  * CONFIG.pixelPerMeter * 1.8;
 
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(angle + Math.PI / 2);
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "rgba(15,23,42,0.35)";
 
         // 车身
         ctx.fillStyle   = speedToColor(vehicle.vel, vehicle.v0);
@@ -236,7 +238,13 @@ function drawVehicles() {
 
         // 前窗亮条
         ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fillRect(-widthPx / 4, -lengthPx / 2 + 2, widthPx / 2, 1.5);
+        ctx.fillRect(-widthPx / 4, -lengthPx / 2 + 2.5, widthPx / 2, 1.8);
+
+        // 车顶形成更清晰的视觉体块
+        ctx.fillStyle = "rgba(255,255,255,0.16)";
+        roundedRectPath(ctx, -widthPx * 0.24, -lengthPx * 0.18, widthPx * 0.48, lengthPx * 0.4, 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
 
         // 刹车灯
         if (vehicle.acc < -1.5 || vehicle.vel < 0.5) {
