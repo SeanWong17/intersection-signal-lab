@@ -20,6 +20,7 @@ const state = {
     },
     performance: new PerformanceMonitor(),
     generator:   {},
+    pendingArrivals: {},
     armFlow:     { N: 800, E: 600, S: 800, W: 400 },
     laneShares:  { left: 0.2, straight: 0.6, right: 0.2 },
     baseVehicleParams: {
@@ -34,6 +35,7 @@ const state = {
     spaceTime:   [],
     demo: {
         greenWave: false,
+        greenWaveSnapshot: null,
         oversat:   false,
     },
 };
@@ -69,9 +71,12 @@ function getLaneArrivalRate(arm, turn) {
 
 function resetGenerators() {
     state.generator = {};
+    state.pendingArrivals = {};
     for (const arm of DIRS) {
         for (const turn of ["left", "straight", "right"]) {
-            state.generator[laneId(arm, turn)] = state.simTime + expSample(getLaneArrivalRate(arm, turn));
+            const key = laneId(arm, turn);
+            state.generator[key] = state.simTime + expSample(getLaneArrivalRate(arm, turn));
+            state.pendingArrivals[key] = 0;
         }
     }
 }
@@ -86,22 +91,35 @@ function spawnVehicle(arm, turn) {
             messageParams: { arm },
             ttl: 3.5
         });
-        return;
+        return false;
     }
     const first = laneVehicles[0];
-    if (first && first.pos < 10) return;
+    if (first && first.pos < 10) return false;
     const vehicle = new Vehicle(state.vehicleId++, arm, turn, state.simTime, state.baseVehicleParams);
     state.vehicles.push(vehicle);
     laneVehicles.unshift(vehicle);
+    return true;
 }
 
 function generateArrivals() {
     for (const arm of DIRS) {
         for (const turn of ["left", "straight", "right"]) {
             const key = laneId(arm, turn);
-            if (state.simTime >= state.generator[key]) {
-                spawnVehicle(arm, turn);
+            while (state.simTime >= state.generator[key]) {
+                state.pendingArrivals[key] += 1;
                 state.generator[key] = state.simTime + expSample(getLaneArrivalRate(arm, turn));
+            }
+        }
+    }
+}
+
+function releasePendingArrivals() {
+    for (const arm of DIRS) {
+        for (const turn of ["left", "straight", "right"]) {
+            const key = laneId(arm, turn);
+            while (state.pendingArrivals[key] > 0) {
+                if (!spawnVehicle(arm, turn)) break;
+                state.pendingArrivals[key] -= 1;
             }
         }
     }
@@ -267,6 +285,7 @@ function resetSimulation() {
     state.spaceTime  = [];
     state.demo.oversat   = false;
     state.demo.greenWave = false;
+    state.demo.greenWaveSnapshot = null;
     state.performance    = new PerformanceMonitor();
     resetRandomSeed();
     for (const arm of DIRS) state.queueDetectors[arm] = new QueueDetector(arm);
@@ -276,6 +295,7 @@ function resetSimulation() {
     resetLaneBuckets();
     resetGenerators();
     updateUI();
+    updatePerformanceUI();
 }
 
 // ── 物理主步进 ────────────────────────────────────────────────────────────────
@@ -283,6 +303,7 @@ function resetSimulation() {
 function stepSimulation(dt) {
     generateArrivals();
     rebuildLaneBuckets();
+    releasePendingArrivals();
     updateInboundVehicles(dt);
     updateCrossingVehicles(dt);
     updateOutboundVehicles(dt);

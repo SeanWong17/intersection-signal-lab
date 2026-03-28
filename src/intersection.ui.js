@@ -82,27 +82,41 @@ function normalizeGreensToCycle(greens, cycle) {
     const bounds = getGreenBounds();
     const available = Math.max(cycle - getSignalLostTime(), bounds.reduce((sum, item) => sum + item.min, 0));
     const total = greens.reduce((sum, value) => sum + value, 0) || greens.length;
-    const scaled = greens.map((value, index) => {
+    const scaled = greens.map(value => {
         const share = value / total;
-        const target = available * share;
-        return clamp(Math.round(target), bounds[index].min, bounds[index].max);
+        return available * share;
     });
+    return normalizePhaseGreensToBounds(scaled, available, bounds);
+}
 
-    let diff = available - scaled.reduce((sum, value) => sum + value, 0);
-    while (diff !== 0) {
-        const direction = Math.sign(diff);
-        let changed = false;
-        for (let i = 0; i < scaled.length && diff !== 0; i++) {
-            const next = scaled[i] + direction;
-            if (next < bounds[i].min || next > bounds[i].max) continue;
-            scaled[i] = next;
-            diff -= direction;
-            changed = true;
-        }
-        if (!changed) break;
+function getCurrentPlanSnapshot() {
+    return {
+        armFlow: { ...state.armFlow },
+        greens: ui.green.map(input => parseFloat(input.value)),
+        cycle: parseFloat(ui.cycle.value),
+        offset: parseFloat(ui.offset.value),
+    };
+}
+
+function restorePlanSnapshot(snapshot) {
+    if (!snapshot) return;
+    for (const arm of DIRS) {
+        state.armFlow[arm] = snapshot.armFlow[arm];
+        setSlider(ui.flow[arm], ui.flowValue[arm], snapshot.armFlow[arm]);
     }
+    setSlider(ui.cycle, ui.cycleValue, snapshot.cycle);
+    snapshot.greens.forEach((value, index) => setSlider(ui.green[index], ui.greenValue[index], value));
+    setSlider(ui.offset, ui.offsetValue, snapshot.offset);
+    syncCycleFromGreens();
+    applySignalSettings();
+}
 
-    return scaled;
+function getCurrentSignalPlan() {
+    return {
+        greens: ui.green.map(input => parseFloat(input.value)),
+        cycle: parseFloat(ui.cycle.value),
+        offset: parseFloat(ui.offset.value),
+    };
 }
 
 function syncCycleFromGreens() {
@@ -175,18 +189,20 @@ function setOversaturatedDemo() {
     [18, 18, 16, 16].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
     syncGreensFromCycle();
     applySignalSettings();
+    updatePerformanceUI();
     state.overlays.push({ type: "overflow", messageKey: "overlay.oversatLoaded", ttl: 6 });
 }
 
 function setGreenWaveDemo() {
     state.demo.greenWave = !state.demo.greenWave;
-    setSlider(ui.offset, ui.offsetValue, state.demo.greenWave ? 8 : 0);
     if (state.demo.greenWave) {
+        state.demo.greenWaveSnapshot = getCurrentPlanSnapshot();
         state.armFlow.N = 900;  state.armFlow.S = 900;
         setSlider(ui.flow.N, ui.flowValue.N, 900);
         setSlider(ui.flow.S, ui.flowValue.S, 900);
         [22, 22, 12, 12].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
         setSlider(ui.cycle, ui.cycleValue, 84);
+        setSlider(ui.offset, ui.offsetValue, 8);
         syncCycleFromGreens();
         state.overlays.push({
             type: "greenwave",
@@ -195,10 +211,15 @@ function setGreenWaveDemo() {
             ttl: 6
         });
     } else {
+        restorePlanSnapshot(state.demo.greenWaveSnapshot);
+        state.demo.greenWaveSnapshot = null;
         state.overlays.push({ type: "greenwave", messageKey: "overlay.greenwaveOff", ttl: 3 });
     }
-    syncCycleFromGreens();
-    applySignalSettings();
+    if (state.demo.greenWave) {
+        syncCycleFromGreens();
+        applySignalSettings();
+    }
+    updatePerformanceUI();
 }
 
 // ── 性能指标 UI 刷新 ────────────────────────────────────────────────────────────
@@ -206,6 +227,14 @@ function setGreenWaveDemo() {
 function updatePerformanceUI() {
     const avgDelay = state.performance.getAverageDelay();
     const los      = losFromDelay(avgDelay);
+    const signalPlan = getCurrentSignalPlan();
+    const vcAnalysis = computeApproachVCRatios(
+        state.armFlow,
+        state.laneShares,
+        signalPlan.greens,
+        signalPlan.cycle,
+        { satFlowPerLane: CONFIG.satFlowPerLane }
+    );
     state.performance.lastLOS = los;
 
     ui.losDisplay.textContent    = los.grade;
@@ -218,8 +247,8 @@ function updatePerformanceUI() {
     // 各臂进口统计行
     ui.approachStats.innerHTML = DIRS.map(arm => {
         const q     = state.queueDetectors[arm].currentQueue;
-        const vc    = (state.armFlow[arm] / CONFIG.satFlowPerLane).toFixed(2);
-        const width = clamp((q / 80) * 100, 0, 100);
+        const vc    = vcAnalysis.vcByArm[arm].toFixed(2);
+        const width = clamp((q / CONFIG.approachLengthM) * 100, 0, 100);
         const vcNum = parseFloat(vc);
         const vcColor = vcNum > 0.9 ? "#ef4444" : vcNum > 0.7 ? "#fb923c" : "#22c55e";
         return `
@@ -239,7 +268,7 @@ function updatePerformanceUI() {
             text: t("alert.severeCongestion", { delay: avgDelay.toFixed(1), grade: los.grade })
         });
     }
-    const highVC = DIRS.find(arm => state.armFlow[arm] / CONFIG.satFlowPerLane > 0.9);
+    const highVC = DIRS.find(arm => vcAnalysis.vcByArm[arm] > 0.9);
     if (highVC) {
         alerts.push({ cls: "warn", text: t("alert.highVC", { arm: getDirectionLabel(highVC) }) });
     }
@@ -271,6 +300,7 @@ function updateUI() {
     ui.headwayValue.textContent     = ui.headway.value;
     ui.green.forEach((el, idx) => { ui.greenValue[idx].textContent = el.value; });
     ui.btnSpeedLabel.textContent    = formatSpeedButtonLabel(CONFIG.timeWarp);
+    updatePerformanceUI();
 }
 
 // ── 画布尺寸自适应 ─────────────────────────────────────────────────────────────

@@ -222,7 +222,7 @@ class QueueDetector {
         let farthest = 0;
         for (const v of inbound) {
             const distToStop = CONFIG.approachLengthM - v.pos;
-            if (distToStop < 80 && v.vel < 1.2) {
+            if (distToStop >= 0 && distToStop <= CONFIG.approachLengthM && v.vel < 1.2) {
                 farthest = Math.max(farthest, distToStop + v.length);
             }
         }

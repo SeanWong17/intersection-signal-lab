@@ -9,15 +9,18 @@ function getLaneFlowsForArm(arm, armFlow, laneShares) {
     };
 }
 
-function normalizePhaseGreens(greens, targetTotal, minGreen, maxGreen) {
-    const scaled = greens.map(value => clamp(Math.round(value), minGreen, maxGreen));
+function normalizePhaseGreensToBounds(greens, targetTotal, bounds) {
+    const scaled = greens.map((value, index) => {
+        const bound = bounds[index];
+        return clamp(Math.round(value), bound.min, bound.max);
+    });
     let diff = targetTotal - scaled.reduce((sum, value) => sum + value, 0);
     while (diff !== 0) {
         const step = Math.sign(diff);
         let changed = false;
         for (let i = 0; i < scaled.length && diff !== 0; i++) {
             const next = scaled[i] + step;
-            if (next < minGreen || next > maxGreen) continue;
+            if (next < bounds[i].min || next > bounds[i].max) continue;
             scaled[i] = next;
             diff -= step;
             changed = true;
@@ -25,6 +28,49 @@ function normalizePhaseGreens(greens, targetTotal, minGreen, maxGreen) {
         if (!changed) break;
     }
     return scaled;
+}
+
+function normalizePhaseGreens(greens, targetTotal, minGreen, maxGreen) {
+    const bounds = greens.map(() => ({ min: minGreen, max: maxGreen }));
+    return normalizePhaseGreensToBounds(greens, targetTotal, bounds);
+}
+
+function computeCriticalLaneAnalysis(armFlow, laneShares, satFlowPerLane = CONFIG.satFlowPerLane) {
+    const laneFlows = {};
+    const criticalFlows = DIRS.map(arm => {
+        laneFlows[arm] = getLaneFlowsForArm(arm, armFlow, laneShares);
+        return Math.max(laneFlows[arm].left, laneFlows[arm].straight);
+    });
+    const criticalRatios = criticalFlows.map(flow => flow / satFlowPerLane);
+    return {
+        laneFlows,
+        criticalFlows,
+        criticalRatios,
+    };
+}
+
+function computeApproachVCRatios(armFlow, laneShares, greenTimes, cycleLength, options = {}) {
+    const satFlowPerLane = options.satFlowPerLane ?? CONFIG.satFlowPerLane;
+    const analysis = computeCriticalLaneAnalysis(armFlow, laneShares, satFlowPerLane);
+    const safeCycle = Math.max(cycleLength, 1);
+    const greenRatios = {};
+    const capacities = {};
+    const vcByArm = {};
+
+    DIRS.forEach((arm, index) => {
+        const greenRatio = clamp((greenTimes[index] || 0) / safeCycle, 0, 1);
+        const capacity = satFlowPerLane * greenRatio;
+        greenRatios[arm] = greenRatio;
+        capacities[arm] = capacity;
+        vcByArm[arm] = capacity > 0 ? analysis.criticalFlows[index] / capacity : Number.POSITIVE_INFINITY;
+    });
+
+    return {
+        ...analysis,
+        greenRatios,
+        capacities,
+        vcByArm,
+    };
 }
 
 function computeWebsterPlan(armFlow, laneShares, options = {}) {
@@ -35,12 +81,11 @@ function computeWebsterPlan(armFlow, laneShares, options = {}) {
     const minGreen = options.minGreen ?? 8;
     const maxGreen = options.maxGreen ?? 45;
 
-    const laneFlows = {};
-    const criticalFlows = DIRS.map(arm => {
-        laneFlows[arm] = getLaneFlowsForArm(arm, armFlow, laneShares);
-        return Math.max(laneFlows[arm].left, laneFlows[arm].straight);
-    });
-    const criticalRatios = criticalFlows.map(flow => flow / satFlowPerLane);
+    const { laneFlows, criticalFlows, criticalRatios } = computeCriticalLaneAnalysis(
+        armFlow,
+        laneShares,
+        satFlowPerLane
+    );
     const ySumRaw = criticalRatios.reduce((sum, value) => sum + value, 0);
     const ySumSafe = clamp(ySumRaw, 0.01, 0.98);
     const lostTime = PHASES.length * lostTimePerPhase;
