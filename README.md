@@ -1,16 +1,16 @@
-# Intersection Signal Teaching Demo
+# Intersection Signal Simulation
 
 [中文](#中文说明) | [English](#english)
 
 ## 中文说明
 
-一个面向 GitHub 公开发布的单点交叉口信号控制教学仿真页面。项目重点是把交通工程里常见、也更贴近日常路口运行的几个概念放到一个可直接打开的浏览器 demo 里：两相位对向同放、左转让行、IDM 跟驰、Webster 配时建议、过饱和现象、单点相位差演示，以及北进口时空图。
+一个单点交叉口信号控制仿真页面，可直接在浏览器打开。模拟了日常路口运行中常见的几个特征：两相位对向同放、左转让行、IDM 跟驰、Webster 配时建议、过饱和现象、单点相位差，以及北进口时空图。
 
 ### 这是什么
 
-- 一个纯前端、零依赖的教学演示页
+- 一个纯前端、零依赖的浏览器 demo
 - 一个单交叉口概念仿真，不是工程设计软件
-- 一个带固定随机种子的可回归 demo，适合公开展示和持续迭代
+- 带固定随机种子，可回归复现
 
 ### 模型口径
 
@@ -21,14 +21,14 @@
 - 跟驰模型：IDM
 - Webster 配时：按两相位临界车道组流率计算
 - 启动流率指标：基于排队放行头时距估计，单位为 `辆/h/车道`
-- 绿波演示：单点相位差的教学近似，不是走廊级协调控制模型
+- 绿波演示：单点相位差，不是走廊级协调控制模型
 
 ### 功能
 
 - 中英文一键切换，界面文本、告警和画布标注同步更新
 - 可调入口流量、周期、相位绿灯、相位差、期望速度和车头时距
 - 实时显示 LOS、平均延误、通行量和排队启动流率估计
-- 内置过饱和和相位差演示场景
+- 内置过饱和和相位差场景
 - 支持固定随机种子，便于复现实验和回归测试
 
 ### 快速开始
@@ -66,8 +66,8 @@ node tests/release-check.js
 
 ### 已知简化与边界
 
-- 这是教学 demo，不包含行人信号逻辑、黄闪控制、公交优先、协调控制网等复杂机制
-- 指标用于教学展示，不应直接替代工程交叉口设计校核
+- 不包含行人信号逻辑、黄闪控制、公交优先、协调控制网等复杂机制
+- 指标用于参考，不应替代工程交叉口设计校核
 - 页面优先兼容桌面端，同时提供窄屏响应式布局；正式发布前仍建议手测手机与平板
 
 ### 目录
@@ -102,13 +102,13 @@ node tests/release-check.js
 
 ## English
 
-A browser-based teaching demo for isolated intersection signal control. It focuses on a more typical urban junction baseline: two-phase opposing movements, permissive left turns, IDM car-following, Webster timing suggestion, oversaturation behavior, single-intersection offset demonstration, and a northbound space-time diagram.
+A browser-based simulation of isolated intersection signal control. It covers a typical urban junction baseline: two-phase opposing movements, permissive left turns, IDM car-following, Webster timing suggestion, oversaturation behavior, single-intersection offset, and a northbound space-time diagram.
 
 ### Scope
 
 - Zero-dependency browser demo
-- Single-intersection teaching simulator, not engineering design software
-- Fixed-seed and regression-checkable for public GitHub release
+- Single-intersection concept simulator, not engineering design software
+- Fixed-seed and regression-checkable
 
 ### Model Assumptions
 
@@ -119,7 +119,7 @@ A browser-based teaching demo for isolated intersection signal control. It focus
 - IDM for inbound car-following
 - Webster timing suggestion based on two-phase critical lane-group flow
 - Queue discharge rate estimated from queued departure headways in `veh/h/lane`
-- Green-wave demo is a single-intersection offset illustration, not a corridor coordination model
+- Green-wave is a single-intersection offset illustration, not a corridor coordination model
 
 ### Quick Start
 

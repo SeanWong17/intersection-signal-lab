@@ -70,7 +70,7 @@ function computeGeometry() {
     const inboundBoundaryOffsets = getInboundBoundaryOffsets();
     const outboundBoundaryOffsets = getOutboundBoundaryOffsets();
     const signalLanes = ["left", "straight", "right"];
-    const signalUpstream = 34;
+    const signalUpstream = 46;
 
     for (const arm of DIRS) {
         const dir  = DIR_VECTORS[arm];
@@ -213,10 +213,10 @@ function buildCrossingPath(arm, turn) {
         };
         for (let i = 0; i <= 100; i++) points.push(bezierCubic(start, p1, p2, end, i / 100));
     } else {
-        const control = {
-            x: start.x,
-            y: end.y,
-        };
+        // 右转：控制点在转角处。N/S臂（竖向）用 (start.x, end.y)，E/W臂（横向）用 (end.x, start.y)
+        const control = armGeo.dir.x === 0
+            ? { x: start.x, y: end.y }
+            : { x: end.x,   y: start.y };
         for (let i = 0; i <= 100; i++) points.push(bezierQuadratic(start, control, end, i / 100));
     }
 

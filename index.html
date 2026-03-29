@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>十字路口交通信号教学仿真</title>
+    <title>十字路口交通信号仿真</title>
     <link rel="stylesheet" href="./src/intersection.css">
 </head>
 <body>
 
     <!-- ── 仿真画布区域 ─────────────────────────────────────────── -->
     <div id="canvas-wrap">
-        <canvas id="simCanvas" aria-label="Intersection traffic signal teaching simulation canvas">Your browser does not support the simulation canvas.</canvas>
+        <canvas id="simCanvas" aria-label="Intersection traffic signal simulation canvas">Your browser does not support the simulation canvas.</canvas>
     </div>
 
     <!-- ── 右侧控制面板 ────────────────────────────────────────── -->
@@ -21,7 +21,7 @@
             <div class="panel-header-top">
                 <div class="panel-title">
                     <span class="panel-icon">🚦</span>
-                    <span id="panelTitle">十字路口信号控制教学仿真</span>
+                    <span id="panelTitle">十字路口信号控制仿真</span>
                 </div>
                 <button id="btnLang" class="btn-ghost btn-lang" title="Switch language">EN</button>
             </div>
@@ -143,7 +143,7 @@
 
         <!-- ── 教育演示 ──────────────────────────────────────────── -->
         <section class="card">
-            <div id="demoHeader" class="card-header">教育演示</div>
+            <div id="demoHeader" class="card-header">场景与可视化</div>
             <div class="demo-buttons">
                 <button id="btnOversat"  class="btn-danger"><span class="btn-icon">⚠</span><span id="btnOversatLabel">过饱和</span></button>
                 <button id="btnGreenWave" class="btn-warn"><span class="btn-icon">🌊</span><span id="btnGreenWaveLabel">绿波协调</span></button>
@@ -170,7 +170,7 @@
 
         <!-- ── 教学标注告警 ───────────────────────────────────────── -->
         <section class="card alerts-card">
-            <div id="alertsHeader" class="card-header">教学标注</div>
+            <div id="alertsHeader" class="card-header">状态提示</div>
             <div id="alerts" class="alerts-list"></div>
         </section>
 

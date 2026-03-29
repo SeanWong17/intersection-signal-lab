@@ -262,7 +262,8 @@ function updateInboundVehicles(dt) {
                         state.performance.recordQueuedDischarge(vehicle.laneKey, state.simTime);
                     }
                 } else {
-                    vehicle.pos = CONFIG.approachLengthM - 0.1;
+                    // 车头不越过停车线：将车辆中心限制在停车线后半车身处
+                    vehicle.pos = Math.min(vehicle.pos, CONFIG.approachLengthM - vehicle.length * 0.5 - 0.3);
                     vehicle.vel = 0;
                     vehicle.wasQueued = true;
                 }

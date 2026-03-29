@@ -484,20 +484,19 @@ function drawEducationLabels() {
         y += 18;
     }
 
-    // 各臂排队长度标注（路口中心区域内侧展示）
+    // 各臂排队长度标注（停车线外侧进口道上显示）
     ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
     for (const arm of DIRS) {
-        const c = CONFIG.center;
-        const dir = geometry.arms[arm].dir;
-        const queueText = t("canvas.queueLabel", {
-            arm: getDirectionLabel(arm),
-            queue: formatMeters(state.queueDetectors[arm].currentQueue)
-        });
-        ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#cbd5e1";
-        // Place label just inside the intersection box on the arm's side
-        const labelX = c.x - dir.x * (CONFIG.stopLinePx - 18);
-        const labelY = c.y - dir.y * (CONFIG.stopLinePx - 14);
-        ctx.textAlign = "center";
+        const armGeo = geometry.arms[arm];
+        const stop   = armGeo.approachAnchor;
+        const dir    = armGeo.dir;
+        const queue  = state.queueDetectors[arm].currentQueue;
+        const queueText = t("canvas.queueLabel", { queue: formatMeters(queue) });
+        ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#94a3b8";
+        // 标注位置：停车线沿进口方向往外 28px
+        const labelX = stop.x + dir.x * 28;
+        const labelY = stop.y + dir.y * 28;
         ctx.fillText(queueText, labelX, labelY);
     }
 
