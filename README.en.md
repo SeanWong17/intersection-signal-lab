@@ -29,11 +29,9 @@ A browser-based simulation of an isolated signalized intersection for viewing ju
 
 Live Demo: <https://seanwong17.github.io/intersection-signal-lab/>
 
-![Main dashboard](./media/cover.png)
+## Demo GIF
 
-## Demo Video
-
-`media/demo.mp4`
+![Demo GIF](./media/demo.gif)
 
 ## Quick Start
 
@@ -78,8 +76,7 @@ The canvas shows vehicles, stop lines, signal heads, queue overlays, status mess
 
 ## Repository Layout
 
-- `media/cover.png`: main dashboard image used in the README.
-- `media/demo.mp4`: demo video showing the interaction flow and built-in scenarios.
+- `media/demo.gif`: animated preview used in the README.
 - `index.html`: page entry point with the canvas, control panel, and UI containers.
 - `LICENSE`: project license file.
 - `README.md`: Chinese documentation.
@@ -93,6 +90,10 @@ The canvas shows vehicles, stop lines, signal heads, queue overlays, status mess
 - `src/intersection.render.js`: canvas rendering for vehicles, overlays, labels, and the space-time view.
 - `src/intersection.simulation.js`: vehicle generation, car-following, discharge, and simulation time update logic.
 - `src/intersection.ui.js`: control binding, scenario switching, metric refresh, and UI state synchronization.
+
+## Acknowledgements
+
+This project was developed and prepared for release with AI-assisted collaboration, including Claude and GPT.
 
 ## License
 

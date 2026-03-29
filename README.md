@@ -29,11 +29,9 @@
 
 在线体验：<https://seanwong17.github.io/intersection-signal-lab/>
 
-![主界面](./media/cover.png)
+## 演示动图
 
-## 演示视频
-
-`media/demo.mp4`
+![演示动图](./media/demo.gif)
 
 ## 快速开始
 
@@ -78,8 +76,7 @@ index.html?seed=20260324
 
 ## 目录结构
 
-- `media/cover.png`：README 使用的主界面封面图。
-- `media/demo.mp4`：项目演示视频，展示场景切换和交互流程。
+- `media/demo.gif`：README 使用的演示动图，展示场景切换和交互流程。
 - `index.html`：页面入口，定义画布、控制面板和各类 UI 节点。
 - `LICENSE`：项目开源协议。
 - `README.md`：中文使用说明。
@@ -93,6 +90,10 @@ index.html?seed=20260324
 - `src/intersection.render.js`：画布绘制逻辑，包括车辆、排队覆盖、标注和时空图。
 - `src/intersection.simulation.js`：车辆生成、跟驰、放行和仿真时间推进逻辑。
 - `src/intersection.ui.js`：控件绑定、场景切换、指标刷新和 UI 状态同步。
+
+## 致谢
+
+本项目在开发和发布整理过程中使用了 AI 工具协作，包括 Claude 和 GPT。
 
 ## 开源协议
 
