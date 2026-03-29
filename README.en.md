@@ -27,6 +27,8 @@ A browser-based simulation of an isolated signalized intersection for viewing ju
 
 ## Preview
 
+Live Demo: <https://seanwong17.github.io/intersection-signal-lab/>
+
 ![Main dashboard](./media/cover.png)
 
 ## Demo Video
@@ -36,6 +38,8 @@ A browser-based simulation of an isolated signalized intersection for viewing ju
 ## Quick Start
 
 Open `index.html` directly in a browser. No dependency installation is required.
+
+You can also use the live demo directly: <https://seanwong17.github.io/intersection-signal-lab/>
 
 For deterministic runs, append a seed in the URL:
 

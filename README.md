@@ -27,6 +27,8 @@
 
 ## 预览
 
+在线体验：<https://seanwong17.github.io/intersection-signal-lab/>
+
 ![主界面](./media/cover.png)
 
 ## 演示视频
@@ -36,6 +38,8 @@
 ## 快速开始
 
 直接在浏览器打开 `index.html` 即可，无需安装依赖。
+
+也可以直接访问在线演示：<https://seanwong17.github.io/intersection-signal-lab/>
 
 如需复现同一组运行结果，可在 URL 后加固定随机种子：
 
