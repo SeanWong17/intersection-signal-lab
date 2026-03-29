@@ -1,146 +1,102 @@
-# Intersection Signal Simulation
+# 十字路口信号控制仿真
 
-[中文](#中文说明) | [English](#english)
+[English](./README.en.md)
 
-## 中文说明
+一个可直接在浏览器打开的单点交叉口信号控制仿真页面，用于展示不同流量与配时条件下的路口运行状态。页面提供实时指标、场景切换和进口时空图，适合用于演示和观察单路口信号控制效果。
 
-一个单点交叉口信号控制仿真页面，可直接在浏览器打开。模拟了日常路口运行中常见的几个特征：两相位对向同放、左转让行、IDM 跟驰、Webster 配时建议、过饱和现象、单点相位差，以及北进口时空图。
+## 功能
 
-### 这是什么
+- 两相位对向同放，左转让行，右转常绿
+- 四个进口流量独立可调，并按左直右比例分配到车道
+- 支持周期、南北相位绿灯、东西相位绿灯和相位差调整
+- 支持 `Webster 配时` 一键生成建议周期和绿灯分配
+- 内置 `过饱和` 和 `绿波协调` 场景
+- 实时显示 LOS、平均延误、通行量和排队启动流率
+- 进口时空图支持北、东、南、西方向切换
+- 中英文界面切换时，侧栏、告警和画布标注同步更新
 
-- 一个纯前端、零依赖的浏览器 demo
-- 一个单交叉口概念仿真，不是工程设计软件
-- 带固定随机种子，可回归复现
+## 模型说明
 
-### 模型口径
+- 路口范围：单个孤立四叉交叉口
+- 车道设置：每个进口 1 条左转、1 条直行、1 条右转
+- 到达过程：按进口流量和车道份额拆分的泊松到达
+- 跟驰逻辑：IDM
+- 信号逻辑：两相位对向同放，左转让行，右转常绿
+- 启动流率：根据排队放行头时距估计，单位为 `辆/h/车道`
+- 绿波场景：单点相位差示意，不包含走廊级协调控制
 
-- 路口类型：单个四叉交叉口
-- 车道假设：每个进口 1 条左转、1 条直行、1 条右转
-- 信号控制：两相位对向同放，左转让行，右转常绿
-- 到达过程：按车道流量占比拆分后的泊松到达
-- 跟驰模型：IDM
-- Webster 配时：按两相位临界车道组流率计算
-- 启动流率指标：基于排队放行头时距估计，单位为 `辆/h/车道`
-- 绿波演示：单点相位差，不是走廊级协调控制模型
+## 预览
 
-### 功能
+![主界面](./media/cover.png)
 
-- 中英文一键切换，界面文本、告警和画布标注同步更新
-- 可调入口流量、周期、相位绿灯、相位差、期望速度和车头时距
-- 实时显示 LOS、平均延误、通行量和排队启动流率估计
-- 内置过饱和和相位差场景
-- 支持固定随机种子，便于复现实验和回归测试
+## 演示视频
 
-### 快速开始
+`media/demo.mp4`
 
-直接在浏览器打开 `index.html` 即可。
+## 快速开始
 
-如果你想复现实验结果，可以带一个固定随机种子：
+直接在浏览器打开 `index.html` 即可，无需安装依赖。
+
+如需复现同一组运行结果，可在 URL 后加固定随机种子：
 
 ```text
 index.html?seed=20260324
 ```
 
-### 测试与校核
+## 使用说明
 
-运行最小回归脚本：
+### 画布区域
 
-```bash
-node tests/release-check.js
-```
+画布区域展示车辆运行、停车线、信号灯头、排队覆盖、状态提示条以及进口时空图。
 
-当前回归脚本覆盖：
+### 控制面板
 
-- 固定随机种子的可复现性
-- Webster 配时建议的关键计算
-- 启动流率估计的基本数值正确性
+- `运行` / `暂停` / `重置`：控制仿真状态
+- 流量控制：调整四个进口需求
+- 信号配时：调整周期、两相位绿灯和相位差
+- `Webster 配时`：按当前需求自动生成建议配时
+- `过饱和`：切换到高需求拥堵场景
+- `绿波协调`：切换到单点相位差演示场景
+- 可视化开关：显示或隐藏排队波、启动流率标注和进口时空图
 
-### 截图与录屏
+### 实时指标
 
-发布前建议补上主页截图、过饱和场景截图和短录屏。需要拍哪些图，见 [docs/SCREENSHOTS.md](./docs/SCREENSHOTS.md)。
+- LOS 服务水平：根据平均延误映射得到等级
+- 平均延误：单位为 `s/辆`
+- 通行量：折算为 `辆/h`
+- 排队启动流率：根据排队放行头时距估计
 
-### 浏览器支持
+## 浏览器支持
 
-- Chrome / Edge 最新版
-- Safari / Firefox 新版本应可运行，但建议发布前手动 smoke test
+- 推荐浏览器：Chrome / Edge 最新版
+- Safari / Firefox 一般应可运行，正式发布前建议手测一次
+- 如需录制稳定的演示素材，建议使用固定随机种子
 
-### 已知简化与边界
-
-- 不包含行人信号逻辑、黄闪控制、公交优先、协调控制网等复杂机制
-- 指标用于参考，不应替代工程交叉口设计校核
-- 页面优先兼容桌面端，同时提供窄屏响应式布局；正式发布前仍建议手测手机与平板
-
-### 目录
+## 目录结构
 
 ```text
 .
-├── docs/
-│   ├── SCREENSHOTS.md
-│   └── screenshots/
+├── media/
+│   ├── cover.png
+│   └── demo.mp4
 ├── index.html
 ├── LICENSE
+├── README.en.md
 ├── README.md
 ├── legacy/
 │   └── intersection.js
-├── src/
-│   ├── intersection.analytics.js
-│   ├── intersection.config.js
-│   ├── intersection.css
-│   ├── intersection.geometry.js
-│   ├── intersection.i18n.js
-│   ├── intersection.models.js
-│   ├── intersection.render.js
-│   ├── intersection.simulation.js
-│   └── intersection.ui.js
-└── tests/
-    └── release-check.js
+└── src/
+    ├── intersection.analytics.js
+    ├── intersection.config.js
+    ├── intersection.css
+    ├── intersection.geometry.js
+    ├── intersection.i18n.js
+    ├── intersection.models.js
+    ├── intersection.render.js
+    ├── intersection.simulation.js
+    └── intersection.ui.js
 ```
 
-### 开源协议
+## 开源协议
 
 本项目采用 [MIT License](./LICENSE)。
-
-## English
-
-A browser-based simulation of isolated intersection signal control. It covers a typical urban junction baseline: two-phase opposing movements, permissive left turns, IDM car-following, Webster timing suggestion, oversaturation behavior, single-intersection offset, and a northbound space-time diagram.
-
-### Scope
-
-- Zero-dependency browser demo
-- Single-intersection concept simulator, not engineering design software
-- Fixed-seed and regression-checkable
-
-### Model Assumptions
-
-- One isolated four-leg intersection
-- One left-turn lane, one through lane, and one right-turn lane per approach
-- Two opposing phases with permissive left turns and free right turns
-- Poisson arrivals split by lane shares
-- IDM for inbound car-following
-- Webster timing suggestion based on two-phase critical lane-group flow
-- Queue discharge rate estimated from queued departure headways in `veh/h/lane`
-- Green-wave is a single-intersection offset illustration, not a corridor coordination model
-
-### Quick Start
-
-Open `index.html` in a browser.
-
-For reproducible runs, append a seed:
-
-```text
-index.html?seed=20260324
-```
-
-### Validation
-
-```bash
-node tests/release-check.js
-```
-
-### Media Checklist
-
-Before tagging a public release, add screenshots and a short screen recording listed in [docs/SCREENSHOTS.md](./docs/SCREENSHOTS.md).
-
-### License
-
-This project is released under the [MIT License](./LICENSE).
