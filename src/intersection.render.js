@@ -484,19 +484,22 @@ function drawEducationLabels() {
         y += 18;
     }
 
-    // 各臂排队长度标注（停车线外侧进口道上显示）
+    // 各臂排队长度标注（路肩位置，进口道外侧边缘之外）
     ctx.font = "11px sans-serif";
     ctx.textAlign = "center";
     for (const arm of DIRS) {
-        const armGeo = geometry.arms[arm];
-        const stop   = armGeo.approachAnchor;
-        const dir    = armGeo.dir;
-        const queue  = state.queueDetectors[arm].currentQueue;
+        const armGeo  = geometry.arms[arm];
+        const stop    = armGeo.approachAnchor;
+        const dir     = armGeo.dir;
+        const side    = armGeo.side;
+        const queue   = state.queueDetectors[arm].currentQueue;
         const queueText = t("canvas.queueLabel", { queue: formatMeters(queue) });
         ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#94a3b8";
-        // 标注位置：停车线沿进口方向往外 28px
-        const labelX = stop.x + dir.x * 28;
-        const labelY = stop.y + dir.y * 28;
+        // 进口道最外侧车道边界 offset = -(divider/2 + laneWidth*3)
+        const outerEdgeOffset = -(CONFIG.centerDividerPx * 0.5 + CONFIG.laneWidthPx * 3);
+        // 标注放在外侧边界再往外 14px，停车线处沿进口方向往外偏 20px
+        const labelX = stop.x + side.x * (outerEdgeOffset - 14) + dir.x * 20;
+        const labelY = stop.y + side.y * (outerEdgeOffset - 14) + dir.y * 20;
         ctx.fillText(queueText, labelX, labelY);
     }
 

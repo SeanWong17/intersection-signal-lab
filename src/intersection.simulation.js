@@ -212,13 +212,14 @@ function getLeader(vehicle, laneVehicles) {
         return { pos: leader.pos, vel: leader.vel, length: leader.length };
     }
     if (!state.signal.isLanePermitted(vehicle)) {
-        return { pos: CONFIG.approachLengthM, vel: 0, length: CONFIG.ghostLength };
+        // ghost 放在停车线处，车头（pos + length/2）自然停在停车线上
+        return { pos: CONFIG.approachLengthM - vehicle.length * 0.5, vel: 0, length: CONFIG.ghostLength };
     }
     if (shouldYieldToOpposingStraight(vehicle)) {
-        return { pos: CONFIG.approachLengthM + 1, vel: 0, length: CONFIG.ghostLength };
+        return { pos: CONFIG.approachLengthM - vehicle.length * 0.5 + 1, vel: 0, length: CONFIG.ghostLength };
     }
     if (!canEnterIntersection(vehicle)) {
-        return { pos: CONFIG.approachLengthM + 2, vel: 0, length: CONFIG.ghostLength };
+        return { pos: CONFIG.approachLengthM - vehicle.length * 0.5 + 2, vel: 0, length: CONFIG.ghostLength };
     }
     return null;
 }
@@ -251,7 +252,8 @@ function updateInboundVehicles(dt) {
             if (CONFIG.approachLengthM - vehicle.pos < 15 && vehicle.vel < 0.5) {
                 vehicle.wasQueued = true;
             }
-            if (vehicle.pos >= CONFIG.approachLengthM) {
+            // 车头到达停车线时触发进入路口判断
+            if (vehicle.pos + vehicle.length * 0.5 >= CONFIG.approachLengthM) {
                 if (vehicle.arrivalTime === null) vehicle.arrivalTime = state.simTime;
                 if (canVehicleAdvanceIntoIntersection(vehicle)) {
                     vehicle.segment         = "crossing";
@@ -262,8 +264,9 @@ function updateInboundVehicles(dt) {
                         state.performance.recordQueuedDischarge(vehicle.laneKey, state.simTime);
                     }
                 } else {
-                    // 车头不越过停车线：将车辆中心限制在停车线后半车身处
-                    vehicle.pos = Math.min(vehicle.pos, CONFIG.approachLengthM - vehicle.length * 0.5 - 0.3);
+                    // 保底：车头不越过停车线
+                    const maxPos = CONFIG.approachLengthM - vehicle.length * 0.5 - 0.1;
+                    if (vehicle.pos > maxPos) vehicle.pos = maxPos;
                     vehicle.vel = 0;
                     vehicle.wasQueued = true;
                 }
