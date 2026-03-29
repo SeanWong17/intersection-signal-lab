@@ -497,9 +497,9 @@ function drawEducationLabels() {
         ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#94a3b8";
         // 进口道最外侧车道边界 offset = -(divider/2 + laneWidth*3)
         const outerEdgeOffset = -(CONFIG.centerDividerPx * 0.5 + CONFIG.laneWidthPx * 3);
-        // 标注放在外侧边界再往外 14px，停车线处沿进口方向往外偏 20px
-        const labelX = stop.x + side.x * (outerEdgeOffset - 14) + dir.x * 20;
-        const labelY = stop.y + side.y * (outerEdgeOffset - 14) + dir.y * 20;
+        // 标注放在外侧边界再往外 30px，停车线处沿进口方向往外偏 20px
+        const labelX = stop.x + side.x * (outerEdgeOffset - 30) + dir.x * 20;
+        const labelY = stop.y + side.y * (outerEdgeOffset - 30) + dir.y * 20;
         ctx.fillText(queueText, labelX, labelY);
     }
 
