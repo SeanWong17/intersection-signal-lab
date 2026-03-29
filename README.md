@@ -80,7 +80,6 @@ index.html?seed=20260324
 - `LICENSE`：项目开源协议。
 - `README.md`：中文使用说明。
 - `README.en.md`：英文使用说明。
-- `legacy/intersection.js`：旧版单文件实现，作为历史参考保留。
 - `src/intersection.analytics.js`：LOS、延误、启动流率、Webster 相关计算逻辑。
 - `src/intersection.config.js`：仿真默认参数和几何常量配置。
 - `src/intersection.css`：页面布局、控件样式和响应式样式。

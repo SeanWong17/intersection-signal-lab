@@ -80,7 +80,6 @@ The canvas shows vehicles, stop lines, signal heads, queue overlays, status mess
 - `LICENSE`: project license file.
 - `README.md`: Chinese documentation.
 - `README.en.md`: English documentation.
-- `legacy/intersection.js`: previous single-file implementation kept for reference.
 - `src/intersection.analytics.js`: LOS, delay, discharge-rate, and Webster calculation logic.
 - `src/intersection.config.js`: default simulation parameters and geometry constants.
 - `src/intersection.css`: page layout, control styling, and responsive rules.
