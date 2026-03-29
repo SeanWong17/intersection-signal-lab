@@ -4,7 +4,7 @@
 
 ## 中文说明
 
-一个面向 GitHub 公开发布的单点交叉口信号控制教学仿真页面。项目重点是把交通工程里常见的几个教学概念放到一个可直接打开的浏览器 demo 里：四相位保护左转、IDM 跟驰、Webster 配时建议、过饱和现象、单点相位差演示，以及北进口时空图。
+一个面向 GitHub 公开发布的单点交叉口信号控制教学仿真页面。项目重点是把交通工程里常见、也更贴近日常路口运行的几个概念放到一个可直接打开的浏览器 demo 里：两相位对向同放、左转让行、IDM 跟驰、Webster 配时建议、过饱和现象、单点相位差演示，以及北进口时空图。
 
 ### 这是什么
 
@@ -16,10 +16,10 @@
 
 - 路口类型：单个四叉交叉口
 - 车道假设：每个进口 1 条左转、1 条直行、1 条右转
-- 信号控制：四相位保护左转，右转常绿
+- 信号控制：两相位对向同放，左转让行，右转常绿
 - 到达过程：按车道流量占比拆分后的泊松到达
 - 跟驰模型：IDM
-- Webster 配时：按每相位临界车道组流率计算
+- Webster 配时：按两相位临界车道组流率计算
 - 启动流率指标：基于排队放行头时距估计，单位为 `辆/h/车道`
 - 绿波演示：单点相位差的教学近似，不是走廊级协调控制模型
 
@@ -102,7 +102,7 @@ node tests/release-check.js
 
 ## English
 
-A browser-based teaching demo for isolated intersection signal control. It bundles several core traffic-engineering teaching concepts into a single zero-dependency frontend project: protected left-turn phasing, IDM car-following, Webster timing suggestion, oversaturation behavior, single-intersection offset demonstration, and a northbound space-time diagram.
+A browser-based teaching demo for isolated intersection signal control. It focuses on a more typical urban junction baseline: two-phase opposing movements, permissive left turns, IDM car-following, Webster timing suggestion, oversaturation behavior, single-intersection offset demonstration, and a northbound space-time diagram.
 
 ### Scope
 
@@ -114,10 +114,10 @@ A browser-based teaching demo for isolated intersection signal control. It bundl
 
 - One isolated four-leg intersection
 - One left-turn lane, one through lane, and one right-turn lane per approach
-- Four protected phases with free right turns
+- Two opposing phases with permissive left turns and free right turns
 - Poisson arrivals split by lane shares
 - IDM for inbound car-following
-- Webster timing suggestion based on critical lane-group flow
+- Webster timing suggestion based on two-phase critical lane-group flow
 - Queue discharge rate estimated from queued departure headways in `veh/h/lane`
 - Green-wave demo is a single-intersection offset illustration, not a corridor coordination model
 

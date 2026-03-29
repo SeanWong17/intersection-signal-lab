@@ -25,7 +25,7 @@
                 </div>
                 <button id="btnLang" class="btn-ghost btn-lang" title="Switch language">EN</button>
             </div>
-            <p id="panelIntro" class="intro">四相位保护左转 · IDM 跟驰 · Webster 配时建议 · 过饱和与绿波演示</p>
+            <p id="panelIntro" class="intro">两相位普通路口 · 左转让行 · IDM 跟驰 · Webster 配时建议</p>
         </header>
 
         <!-- 播放控制条 -->
@@ -101,29 +101,19 @@
             <div class="slider-group">
                 <div class="slider-row">
                     <span id="cycleLabel" class="label-text">周期</span>
-                    <input id="cycleLength" type="range" min="40" max="120" step="1" value="120">
-                    <span id="cycleValue" class="slider-val">120</span><span class="unit">s</span>
+                    <input id="cycleLength" type="range" min="40" max="120" step="1" value="96">
+                    <span id="cycleValue" class="slider-val">96</span><span class="unit">s</span>
                 </div>
                 <div class="phase-grid">
                     <div class="phase-row">
-                        <span id="phaseNorthLabel" class="phase-tag">北</span>
-                        <input id="green0" type="range" min="8" max="45" step="1" value="32">
-                        <span id="green0Value" class="slider-val">32</span><span class="unit">s</span>
+                        <span id="phaseMainLabel" class="phase-tag">南北</span>
+                        <input id="green0" type="range" min="10" max="70" step="1" value="52">
+                        <span id="green0Value" class="slider-val">52</span><span class="unit">s</span>
                     </div>
                     <div class="phase-row">
-                        <span id="phaseSouthLabel" class="phase-tag">南</span>
-                        <input id="green1" type="range" min="8" max="45" step="1" value="24">
-                        <span id="green1Value" class="slider-val">24</span><span class="unit">s</span>
-                    </div>
-                    <div class="phase-row">
-                        <span id="phaseEastLabel" class="phase-tag">东</span>
-                        <input id="green2" type="range" min="8" max="45" step="1" value="32">
-                        <span id="green2Value" class="slider-val">32</span><span class="unit">s</span>
-                    </div>
-                    <div class="phase-row">
-                        <span id="phaseWestLabel" class="phase-tag">西</span>
-                        <input id="green3" type="range" min="8" max="45" step="1" value="16">
-                        <span id="green3Value" class="slider-val">16</span><span class="unit">s</span>
+                        <span id="phaseCrossLabel" class="phase-tag">东西</span>
+                        <input id="green1" type="range" min="10" max="70" step="1" value="36">
+                        <span id="green1Value" class="slider-val">36</span><span class="unit">s</span>
                     </div>
                 </div>
                 <div class="slider-row">

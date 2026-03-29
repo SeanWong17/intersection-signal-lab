@@ -240,16 +240,16 @@ function drawArrowHead(point, direction, side, size) {
 // ── 信号灯 ────────────────────────────────────────────────────────────────────
 
 function drawSignals() {
-    for (const phase of PHASES) {
-        const armGeo = geometry.arms[phase.arm];
+    for (const arm of DIRS) {
+        const armGeo = geometry.arms[arm];
         drawSignalSupport(armGeo);
         for (const lane of ["left", "straight"]) {
-            const key       = laneId(phase.arm, lane);
+            const key       = laneId(arm, lane);
             const head      = geometry.signalHeads[key];
             const stateName = state.signal.laneState[key];
             drawSignalHead(head.x, head.y, stateName, Math.ceil(state.signal.countdown));
         }
-        const rightHead = geometry.signalHeads[laneId(phase.arm, "right")];
+        const rightHead = geometry.signalHeads[laneId(arm, "right")];
         drawSignalHead(rightHead.x, rightHead.y, "green", null, true);
     }
 }
@@ -457,7 +457,7 @@ function drawEducationLabels() {
     const lines = [
         t("canvas.simClock", { time: state.simTime.toFixed(1) }),
         t("canvas.currentPhase", {
-            phase: getPhaseLabel(PHASES[state.signal.phaseIndex].arm),
+            phase: getPhaseLabel(PHASES[state.signal.phaseIndex].key),
             stage: getSignalStageLabel(state.signal.stage)
         }),
         t("canvas.onlineVehicles", { count: state.vehicles.length })
@@ -510,7 +510,7 @@ function drawEducationLabels() {
 // ── 时空图小窗口 ───────────────────────────────────────────────────────────────
 
 function estimateNorthGreenWindows(startTime, endTime) {
-    const phaseIdx = PHASES.findIndex(p => p.arm === "N");
+    const phaseIdx = getPhaseIndexForArm("N");
     return state.signal.getPhaseGreenWindows(phaseIdx, startTime, endTime);
 }
 

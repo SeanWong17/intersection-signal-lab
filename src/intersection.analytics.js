@@ -37,15 +37,24 @@ function normalizePhaseGreens(greens, targetTotal, minGreen, maxGreen) {
 
 function computeCriticalLaneAnalysis(armFlow, laneShares, satFlowPerLane = CONFIG.satFlowPerLane) {
     const laneFlows = {};
-    const criticalFlows = DIRS.map(arm => {
+    const criticalFlowsByArm = DIRS.map(arm => {
         laneFlows[arm] = getLaneFlowsForArm(arm, armFlow, laneShares);
         return Math.max(laneFlows[arm].left, laneFlows[arm].straight);
     });
-    const criticalRatios = criticalFlows.map(flow => flow / satFlowPerLane);
+    const criticalRatiosByArm = criticalFlowsByArm.map(flow => flow / satFlowPerLane);
+    const phaseCriticalFlows = PHASES.map(phase =>
+        phase.arms.reduce((sum, arm) => sum + Math.max(laneFlows[arm].left, laneFlows[arm].straight), 0)
+    );
+    const phaseCriticalRatios = phaseCriticalFlows.map(flow => flow / satFlowPerLane);
+
     return {
         laneFlows,
-        criticalFlows,
-        criticalRatios,
+        criticalFlowsByArm,
+        criticalRatiosByArm,
+        phaseCriticalFlows,
+        phaseCriticalRatios,
+        criticalFlows: phaseCriticalFlows,
+        criticalRatios: phaseCriticalRatios,
     };
 }
 
@@ -58,11 +67,12 @@ function computeApproachVCRatios(armFlow, laneShares, greenTimes, cycleLength, o
     const vcByArm = {};
 
     DIRS.forEach((arm, index) => {
-        const greenRatio = clamp((greenTimes[index] || 0) / safeCycle, 0, 1);
+        const phaseIndex = getPhaseIndexForArm(arm);
+        const greenRatio = clamp((greenTimes[phaseIndex] || 0) / safeCycle, 0, 1);
         const capacity = satFlowPerLane * greenRatio;
         greenRatios[arm] = greenRatio;
         capacities[arm] = capacity;
-        vcByArm[arm] = capacity > 0 ? analysis.criticalFlows[index] / capacity : Number.POSITIVE_INFINITY;
+        vcByArm[arm] = capacity > 0 ? analysis.criticalFlowsByArm[index] / capacity : Number.POSITIVE_INFINITY;
     });
 
     return {
@@ -79,28 +89,26 @@ function computeWebsterPlan(armFlow, laneShares, options = {}) {
     const minCycle = options.minCycle ?? 40;
     const maxCycle = options.maxCycle ?? 120;
     const minGreen = options.minGreen ?? 8;
-    const maxGreen = options.maxGreen ?? 45;
+    const maxGreen = options.maxGreen ?? 70;
 
-    const { laneFlows, criticalFlows, criticalRatios } = computeCriticalLaneAnalysis(
+    const analysis = computeCriticalLaneAnalysis(
         armFlow,
         laneShares,
         satFlowPerLane
     );
-    const ySumRaw = criticalRatios.reduce((sum, value) => sum + value, 0);
+    const ySumRaw = analysis.phaseCriticalRatios.reduce((sum, value) => sum + value, 0);
     const ySumSafe = clamp(ySumRaw, 0.01, 0.98);
     const lostTime = PHASES.length * lostTimePerPhase;
     const cycleCandidate = Math.ceil((1.5 * lostTime + 5) / Math.max(1 - ySumSafe, 0.02));
     const cycle = clamp(cycleCandidate, minCycle, maxCycle);
     const effectiveGreen = Math.max(cycle - lostTime, minGreen * PHASES.length);
     const denominator = Math.max(ySumRaw, 0.01);
-    const rawGreens = criticalRatios.map(ratio => (effectiveGreen * ratio) / denominator);
+    const rawGreens = analysis.phaseCriticalRatios.map(ratio => (effectiveGreen * ratio) / denominator);
     const greens = normalizePhaseGreens(rawGreens, effectiveGreen, minGreen, maxGreen);
     const adjustedCycle = greens.reduce((sum, value) => sum + value, 0) + lostTime;
 
     return {
-        laneFlows,
-        criticalFlows,
-        criticalRatios,
+        ...analysis,
         ySum: ySumRaw,
         lostTime,
         cycle,

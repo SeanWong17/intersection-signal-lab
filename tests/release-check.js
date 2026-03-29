@@ -56,25 +56,25 @@ vm.runInContext(`
     globalThis.__plan = computeWebsterPlan(
         { N: 800, E: 600, S: 800, W: 400 },
         { left: 0.2, straight: 0.6, right: 0.2 },
-        { satFlowPerLane: 1800, lostTimePerPhase: 4, minCycle: 40, maxCycle: 120, minGreen: 8, maxGreen: 45 }
+        { satFlowPerLane: 1800, lostTimePerPhase: 4, minCycle: 40, maxCycle: 120, minGreen: 10, maxGreen: 70 }
     );
 `, context);
-assert.deepStrictEqual(Array.from(context.__plan.greens), [32, 24, 32, 16], "unexpected Webster green split");
+assert.deepStrictEqual(Array.from(context.__plan.greens), [69, 43], "unexpected Webster green split");
 assert.strictEqual(context.__plan.adjustedCycle, 120, "unexpected Webster cycle length");
-approxEqual(context.__plan.criticalRatios[0], 480 / 1800);
-approxEqual(context.__plan.criticalRatios[3], 240 / 1800);
+approxEqual(context.__plan.criticalRatios[0], 960 / 1800);
+approxEqual(context.__plan.criticalRatios[1], 600 / 1800);
 
 vm.runInContext(`
     globalThis.__vc = computeApproachVCRatios(
         { N: 800, E: 600, S: 800, W: 400 },
         { left: 0.2, straight: 0.6, right: 0.2 },
-        [32, 24, 32, 16],
-        120,
+        [52, 36],
+        96,
         { satFlowPerLane: 1800 }
     );
 `, context);
-approxEqual(context.__vc.vcByArm.N, 1);
-approxEqual(context.__vc.vcByArm.W, 1);
+approxEqual(context.__vc.vcByArm.N, 480 / (1800 * (52 / 96)));
+approxEqual(context.__vc.vcByArm.W, 240 / (1800 * (36 / 96)));
 
 vm.runInContext(`
     globalThis.__pm = new PerformanceMonitor();
@@ -148,5 +148,35 @@ vm.runInContext(`
 `, context);
 assert.strictEqual(context.__spillback, true, "long stopped queue should trigger spillback");
 assert(context.__queueLength > 144, "spillback queue should extend near the upstream end");
+
+vm.runInContext(`
+    resetLaneBuckets();
+    state.vehicles = [];
+    state.crossingReservations = [];
+    state.simTime = 0;
+    state.signal = new TrafficSignal();
+    state.signal.setPlan([52, 36], 96, 0);
+    state.signal.syncToTime(0);
+
+    globalThis.__northLeft = new Vehicle(301, "N", "left", 0, state.baseVehicleParams);
+    __northLeft.pos = CONFIG.approachLengthM;
+    __northLeft.arrivalTime = 0;
+    __northLeft.vel = 4;
+
+    globalThis.__southStraight = new Vehicle(302, "S", "straight", 0, state.baseVehicleParams);
+    __southStraight.pos = CONFIG.approachLengthM - 6;
+    __southStraight.vel = 7;
+
+    state.vehicles = [__northLeft, __southStraight];
+    rebuildLaneBuckets();
+
+    globalThis.__leftYielding = shouldYieldToOpposingStraight(__northLeft);
+    globalThis.__leftBlocked = canVehicleAdvanceIntoIntersection(__northLeft);
+    __southStraight.pos = CONFIG.approachLengthM - 80;
+    globalThis.__leftReleased = canVehicleAdvanceIntoIntersection(__northLeft);
+`, context);
+assert.strictEqual(context.__leftYielding, true, "left turn should yield to opposing through traffic");
+assert.strictEqual(context.__leftBlocked, false, "yielding left turn should not enter while opposing through is close");
+assert.strictEqual(context.__leftReleased, true, "left turn should proceed once opposing through traffic is no longer near");
 
 console.log("release-check: all checks passed");

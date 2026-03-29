@@ -30,13 +30,30 @@ const TURN_TO_EXIT = {
     W: { left: "N", straight: "E", right: "S" },
 };
 
-// 四相位：每相位对应一条臂的直行+左转
+const OPPOSITE_ARM = {
+    N: "S",
+    E: "W",
+    S: "N",
+    W: "E",
+};
+
+// 两相位：南北同放、东西同放；左转与对向直行同绿但需让行
 const PHASES = [
-    { arm: "N", label: "北向相位", lanes: ["N-left", "N-straight"] },
-    { arm: "S", label: "南向相位", lanes: ["S-left", "S-straight"] },
-    { arm: "E", label: "东向相位", lanes: ["E-left", "E-straight"] },
-    { arm: "W", label: "西向相位", lanes: ["W-left", "W-straight"] },
+    {
+        key: "NS",
+        arms: ["N", "S"],
+        lanes: ["N-left", "N-straight", "S-left", "S-straight"],
+    },
+    {
+        key: "EW",
+        arms: ["E", "W"],
+        lanes: ["E-left", "E-straight", "W-left", "W-straight"],
+    },
 ];
+
+function getPhaseIndexForArm(arm) {
+    return arm === "N" || arm === "S" ? 0 : 1;
+}
 
 const CONFIG = {
     pixelPerMeter: 1.6,
@@ -55,6 +72,9 @@ const CONFIG = {
     dt: 0.05,                      // 物理步长（s）
     timeWarp: 1,                   // 时间倍速
     ghostLength: 0,
+    leftTurnYieldLookaheadM: 36,   // 左转默认让行的对向直行感知距离
+    leftTurnImmediateHazardM: 14,  // 长等待后仍必须让行的立即冲突距离
+    leftTurnCourtesyYieldS: 8,     // 左转长等待后放宽让行判定阈值
     speedColorMin: 0,              // 速度→颜色 HSL 色相范围
     speedColorMax: 120,
     randomSeed: readInitialSeed(),

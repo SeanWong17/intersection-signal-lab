@@ -137,6 +137,36 @@ function reservationDuration(vehicle) {
     return vehicle.crossingPath.lengthMeters / CONFIG.crossingSpeed + 1.2;
 }
 
+function getOpposingStraightVehicle(vehicle) {
+    if (vehicle.turnIntent !== "left") return null;
+    const opposingLane = state.lanes[laneId(OPPOSITE_ARM[vehicle.arm], "straight")] || [];
+    if (!opposingLane.length) return null;
+    return opposingLane[opposingLane.length - 1];
+}
+
+function shouldYieldToOpposingStraight(vehicle) {
+    if (vehicle.turnIntent !== "left") return false;
+    const opposing = getOpposingStraightVehicle(vehicle);
+    if (!opposing) return false;
+    if (!state.signal.isLanePermitted(opposing)) return false;
+
+    const opposingDistToStop = CONFIG.approachLengthM - opposing.pos;
+    if (opposingDistToStop < 0) return false;
+
+    const waited = Math.max(0, state.simTime - (vehicle.arrivalTime ?? state.simTime));
+    const courtesyThreshold = waited >= CONFIG.leftTurnCourtesyYieldS
+        ? CONFIG.leftTurnImmediateHazardM
+        : CONFIG.leftTurnYieldLookaheadM;
+
+    return opposingDistToStop <= courtesyThreshold && opposing.vel > 0.5 && canEnterIntersection(opposing);
+}
+
+function canVehicleAdvanceIntoIntersection(vehicle) {
+    return state.signal.isLanePermitted(vehicle)
+        && !shouldYieldToOpposingStraight(vehicle)
+        && canEnterIntersection(vehicle);
+}
+
 function canEnterIntersection(vehicle) {
     const buffer = vehicle.turnIntent === "right" ? 0.5 : 0.8;
     if (CONFIG.approachLengthM - vehicle.pos > buffer) return true;
@@ -168,9 +198,11 @@ function getLeader(vehicle, laneVehicles) {
         const leader = laneVehicles[idx + 1];
         return { pos: leader.pos, vel: leader.vel, length: leader.length };
     }
-    const signalAllowed = state.signal.isLanePermitted(vehicle);
-    if (!signalAllowed) {
+    if (!state.signal.isLanePermitted(vehicle)) {
         return { pos: CONFIG.approachLengthM, vel: 0, length: CONFIG.ghostLength };
+    }
+    if (shouldYieldToOpposingStraight(vehicle)) {
+        return { pos: CONFIG.approachLengthM + 1, vel: 0, length: CONFIG.ghostLength };
     }
     if (!canEnterIntersection(vehicle)) {
         return { pos: CONFIG.approachLengthM + 2, vel: 0, length: CONFIG.ghostLength };
@@ -208,7 +240,7 @@ function updateInboundVehicles(dt) {
             }
             if (vehicle.pos >= CONFIG.approachLengthM) {
                 if (vehicle.arrivalTime === null) vehicle.arrivalTime = state.simTime;
-                if (state.signal.isLanePermitted(vehicle) && canEnterIntersection(vehicle)) {
+                if (canVehicleAdvanceIntoIntersection(vehicle)) {
                     vehicle.segment         = "crossing";
                     vehicle.crossingDistance = 0;
                     vehicle.vel             = clamp(vehicle.vel, 3, CONFIG.crossingSpeed);

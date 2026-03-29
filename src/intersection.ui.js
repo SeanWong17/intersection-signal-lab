@@ -24,14 +24,10 @@ const ui = {
     green: [
         document.getElementById("green0"),
         document.getElementById("green1"),
-        document.getElementById("green2"),
-        document.getElementById("green3"),
     ],
     greenValue: [
         document.getElementById("green0Value"),
         document.getElementById("green1Value"),
-        document.getElementById("green2Value"),
-        document.getElementById("green3Value"),
     ],
     offset:             document.getElementById("offset"),
     offsetValue:        document.getElementById("offsetValue"),
@@ -105,7 +101,9 @@ function restorePlanSnapshot(snapshot) {
         setSlider(ui.flow[arm], ui.flowValue[arm], snapshot.armFlow[arm]);
     }
     setSlider(ui.cycle, ui.cycleValue, snapshot.cycle);
-    snapshot.greens.forEach((value, index) => setSlider(ui.green[index], ui.greenValue[index], value));
+    snapshot.greens.slice(0, ui.green.length).forEach((value, index) => {
+        setSlider(ui.green[index], ui.greenValue[index], value);
+    });
     setSlider(ui.offset, ui.offsetValue, snapshot.offset);
     syncCycleFromGreens();
     applySignalSettings();
@@ -167,10 +165,8 @@ function runWebsterOptimization() {
         messageKey: "overlay.webster",
         messageParams: {
             cycle: plan.adjustedCycle,
-            north: plan.greens[0],
-            south: plan.greens[1],
-            east: plan.greens[2],
-            west: plan.greens[3]
+            ns: plan.greens[0],
+            ew: plan.greens[1]
         },
         ttl:  5
     });
@@ -186,7 +182,7 @@ function setOversaturatedDemo() {
         setSlider(ui.flow[arm], ui.flowValue[arm], flows[arm]);
     }
     setSlider(ui.cycle, ui.cycleValue, 110);
-    [18, 18, 16, 16].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+    [54, 48].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
     syncGreensFromCycle();
     applySignalSettings();
     updatePerformanceUI();
@@ -200,7 +196,7 @@ function setGreenWaveDemo() {
         state.armFlow.N = 900;  state.armFlow.S = 900;
         setSlider(ui.flow.N, ui.flowValue.N, 900);
         setSlider(ui.flow.S, ui.flowValue.S, 900);
-        [22, 22, 12, 12].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
+        [50, 26].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
         setSlider(ui.cycle, ui.cycleValue, 84);
         setSlider(ui.offset, ui.offsetValue, 8);
         syncCycleFromGreens();
