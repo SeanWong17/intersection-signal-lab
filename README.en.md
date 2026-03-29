@@ -74,28 +74,22 @@ The canvas shows vehicles, stop lines, signal heads, queue overlays, status mess
 
 ## Repository Layout
 
-```text
-.
-├── media/
-│   ├── cover.png
-│   └── demo.mp4
-├── index.html
-├── LICENSE
-├── README.en.md
-├── README.md
-├── legacy/
-│   └── intersection.js
-└── src/
-    ├── intersection.analytics.js
-    ├── intersection.config.js
-    ├── intersection.css
-    ├── intersection.geometry.js
-    ├── intersection.i18n.js
-    ├── intersection.models.js
-    ├── intersection.render.js
-    ├── intersection.simulation.js
-    └── intersection.ui.js
-```
+- `media/cover.png`: main dashboard image used in the README.
+- `media/demo.mp4`: demo video showing the interaction flow and built-in scenarios.
+- `index.html`: page entry point with the canvas, control panel, and UI containers.
+- `LICENSE`: project license file.
+- `README.md`: Chinese documentation.
+- `README.en.md`: English documentation.
+- `legacy/intersection.js`: previous single-file implementation kept for reference.
+- `src/intersection.analytics.js`: LOS, delay, discharge-rate, and Webster calculation logic.
+- `src/intersection.config.js`: default simulation parameters and geometry constants.
+- `src/intersection.css`: page layout, control styling, and responsive rules.
+- `src/intersection.geometry.js`: intersection geometry, lane boundaries, stop lines, and signal-head positions.
+- `src/intersection.i18n.js`: bilingual text resources and language switching logic.
+- `src/intersection.models.js`: core models for vehicles, signals, and queue detection.
+- `src/intersection.render.js`: canvas rendering for vehicles, overlays, labels, and the space-time view.
+- `src/intersection.simulation.js`: vehicle generation, car-following, discharge, and simulation time update logic.
+- `src/intersection.ui.js`: control binding, scenario switching, metric refresh, and UI state synchronization.
 
 ## License
 

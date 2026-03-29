@@ -74,28 +74,22 @@ index.html?seed=20260324
 
 ## 目录结构
 
-```text
-.
-├── media/
-│   ├── cover.png
-│   └── demo.mp4
-├── index.html
-├── LICENSE
-├── README.en.md
-├── README.md
-├── legacy/
-│   └── intersection.js
-└── src/
-    ├── intersection.analytics.js
-    ├── intersection.config.js
-    ├── intersection.css
-    ├── intersection.geometry.js
-    ├── intersection.i18n.js
-    ├── intersection.models.js
-    ├── intersection.render.js
-    ├── intersection.simulation.js
-    └── intersection.ui.js
-```
+- `media/cover.png`：README 使用的主界面封面图。
+- `media/demo.mp4`：项目演示视频，展示场景切换和交互流程。
+- `index.html`：页面入口，定义画布、控制面板和各类 UI 节点。
+- `LICENSE`：项目开源协议。
+- `README.md`：中文使用说明。
+- `README.en.md`：英文使用说明。
+- `legacy/intersection.js`：旧版单文件实现，作为历史参考保留。
+- `src/intersection.analytics.js`：LOS、延误、启动流率、Webster 相关计算逻辑。
+- `src/intersection.config.js`：仿真默认参数和几何常量配置。
+- `src/intersection.css`：页面布局、控件样式和响应式样式。
+- `src/intersection.geometry.js`：路口几何、车道边界、停车线和信号灯头位置计算。
+- `src/intersection.i18n.js`：中英文文案和界面语言切换逻辑。
+- `src/intersection.models.js`：车辆、信号机、排队检测等核心数据模型。
+- `src/intersection.render.js`：画布绘制逻辑，包括车辆、排队覆盖、标注和时空图。
+- `src/intersection.simulation.js`：车辆生成、跟驰、放行和仿真时间推进逻辑。
+- `src/intersection.ui.js`：控件绑定、场景切换、指标刷新和 UI 状态同步。
 
 ## 开源协议
 
