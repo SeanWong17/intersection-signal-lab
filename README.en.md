@@ -71,7 +71,7 @@ The canvas shows vehicles, stop lines, signal heads, queue overlays, status mess
 ## Browser Support
 
 - Recommended: latest Chrome or Edge
-- Safari and Firefox should generally work, but a manual smoke test is recommended before release
+- Supported: latest Safari and Firefox
 - For stable recordings, use a fixed seed
 
 ## Repository Layout

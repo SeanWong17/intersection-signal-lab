@@ -71,7 +71,7 @@ index.html?seed=20260324
 ## 浏览器支持
 
 - 推荐浏览器：Chrome / Edge 最新版
-- Safari / Firefox 一般应可运行，正式发布前建议手测一次
+- 支持 Safari / Firefox 最新版
 - 如需录制稳定的演示素材，建议使用固定随机种子
 
 ## 目录结构
