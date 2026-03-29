@@ -32,7 +32,8 @@ const state = {
     },
     crossingReservations: [],
     overlays:    [],
-    spaceTime:   [],
+    spaceTime:   { N: [], E: [], S: [], W: [] },
+    spaceTimeArm: "N",
     demo: {
         greenWave: false,
         greenWaveSnapshot: null,
@@ -313,12 +314,15 @@ function updateQueues() {
 
 function updateSpaceTime() {
     for (const v of state.vehicles) {
-        if (v.arm === "N" && v.segment === "inbound") {
-            state.spaceTime.push({ t: state.simTime, x: v.pos, speed: v.vel });
+        if (v.segment === "inbound") {
+            state.spaceTime[v.arm].push({ t: state.simTime, x: v.pos, speed: v.vel });
         }
     }
-    while (state.spaceTime.length && state.simTime - state.spaceTime[0].t > 80) {
-        state.spaceTime.shift();
+    const cutoff = state.simTime - 80;
+    for (const arm of DIRS) {
+        while (state.spaceTime[arm].length && state.spaceTime[arm][0].t < cutoff) {
+            state.spaceTime[arm].shift();
+        }
     }
 }
 
@@ -332,7 +336,7 @@ function resetSimulation() {
     state.vehicles   = [];
     state.crossingReservations = [];
     state.overlays   = [];
-    state.spaceTime  = [];
+    state.spaceTime  = { N: [], E: [], S: [], W: [] };
     state.demo.oversat   = false;
     state.demo.greenWave = false;
     state.demo.greenWaveSnapshot = null;

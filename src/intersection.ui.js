@@ -361,6 +361,28 @@ function bindUI() {
     ui.btnWebster.addEventListener("click",  runWebsterOptimization);
     ui.btnOversat.addEventListener("click",  setOversaturatedDemo);
     ui.btnGreenWave.addEventListener("click", setGreenWaveDemo);
+
+    // 时空图方向按钮（绘制在 canvas 上，通过点击坐标识别）
+    canvas.addEventListener("click", (e) => {
+        if (!ui.showSpaceTime.checked) return;
+        const rect   = canvas.getBoundingClientRect();
+        const cx     = (e.clientX - rect.left) * (canvas.width  / rect.width);
+        const cy     = (e.clientY - rect.top)  * (canvas.height / rect.height);
+        const W = 290, H = 165;
+        const winX = canvas.width  - W - 16;
+        const winY = canvas.height - H - 16;
+        const btnW = 22, btnH = 14, btnGap = 3;
+        const btnStartX = winX + W - 12 - (btnW + btnGap) * 4 + btnGap;
+        const btnY = winY + 7;
+        for (let i = 0; i < DIRS.length; i++) {
+            const bx = btnStartX + i * (btnW + btnGap);
+            if (cx >= bx && cx <= bx + btnW && cy >= btnY && cy <= btnY + btnH) {
+                state.spaceTimeArm = DIRS[i];
+                break;
+            }
+        }
+    });
+
     window.addEventListener("resize", resizeCanvas);
 }
 

@@ -524,16 +524,12 @@ function drawEducationLabels() {
 
 // ── 时空图小窗口 ───────────────────────────────────────────────────────────────
 
-function estimateNorthGreenWindows(startTime, endTime) {
-    const phaseIdx = getPhaseIndexForArm("N");
-    return state.signal.getPhaseGreenWindows(phaseIdx, startTime, endTime);
-}
-
 function drawSpaceTimeWindow() {
     if (!ui.showSpaceTime.checked) return;
     const W = 290, H = 165;
     const x = canvas.width  - W - 16;
     const y = canvas.height - H - 16;
+    const arm = state.spaceTimeArm;
 
     ctx.save();
     ctx.fillStyle   = "rgba(2,6,23,0.86)";
@@ -543,9 +539,33 @@ function drawSpaceTimeWindow() {
     ctx.fill();
     ctx.stroke();
 
+    // 标题
     ctx.fillStyle = "#94a3b8";
     ctx.font      = "11px sans-serif";
-    ctx.fillText(t("canvas.spaceTimeTitle"), x + 12, y + 17);
+    ctx.textAlign = "left";
+    ctx.fillText(t("canvas.spaceTimeTitle", { arm: getDirectionLabel(arm) }), x + 12, y + 17);
+
+    // 方向切换按钮（右上角）
+    const btnW = 22, btnH = 14, btnGap = 3;
+    const btnStartX = x + W - 12 - (btnW + btnGap) * 4 + btnGap;
+    const btnY = y + 7;
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i < DIRS.length; i++) {
+        const d  = DIRS[i];
+        const bx = btnStartX + i * (btnW + btnGap);
+        const active = d === arm;
+        ctx.fillStyle   = active ? "rgba(125,211,252,0.25)" : "rgba(148,163,184,0.08)";
+        ctx.strokeStyle = active ? "rgba(125,211,252,0.7)"  : "rgba(148,163,184,0.25)";
+        ctx.lineWidth   = 0.8;
+        roundedRectPath(ctx, bx, btnY, btnW, btnH, 3);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = active ? "#7dd3fc" : "#64748b";
+        ctx.fillText(getDirectionLabel(d), bx + btnW / 2, btnY + btnH / 2);
+    }
+    ctx.textBaseline = "alphabetic";
 
     const pad = 14, lpad = 22;
     const gx  = x + lpad;
@@ -567,7 +587,8 @@ function drawSpaceTimeWindow() {
     }
 
     // 绿灯背景窗
-    for (const win of estimateNorthGreenWindows(t0, state.simTime)) {
+    const phaseIdx = getPhaseIndexForArm(arm);
+    for (const win of state.signal.getPhaseGreenWindows(phaseIdx, t0, state.simTime)) {
         const sx = gx + ((win.start - t0) / history) * gw;
         const ex = gx + ((win.end   - t0) / history) * gw;
         ctx.fillStyle = "rgba(34,197,94,0.1)";
@@ -575,7 +596,7 @@ function drawSpaceTimeWindow() {
     }
 
     // 轨迹点
-    for (const pt of state.spaceTime) {
+    for (const pt of state.spaceTime[arm]) {
         if (pt.t < t0) continue;
         const px = gx + ((pt.t - t0) / history) * gw;
         const py = gy + gh - (pt.x / CONFIG.approachLengthM) * gh;
