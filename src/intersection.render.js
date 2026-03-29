@@ -10,8 +10,8 @@ function drawBackground() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const g = ctx.createRadialGradient(
-        CONFIG.center.x, CONFIG.center.y, 80,
-        CONFIG.center.x, CONFIG.center.y, 420
+        CONFIG.center.x, CONFIG.center.y, 120,
+        CONFIG.center.x, CONFIG.center.y, 550
     );
     g.addColorStop(0, "rgba(56,189,248,0.08)");
     g.addColorStop(1, "rgba(15,23,42,0)");
@@ -102,8 +102,8 @@ function drawMarkings() {
                 y: armGeo.inboundFar.y + armGeo.side.y * offset,
             };
             const p2 = {
-                x: armGeo.outboundFar.x + armGeo.side.x * offset,
-                y: armGeo.outboundFar.y + armGeo.side.y * offset,
+                x: armGeo.approachAnchor.x + armGeo.side.x * offset,
+                y: armGeo.approachAnchor.y + armGeo.side.y * offset,
             };
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
@@ -119,8 +119,8 @@ function drawMarkings() {
                 y: armGeo.inboundFar.y + armGeo.side.y * offset,
             };
             const p2 = {
-                x: armGeo.outboundFar.x + armGeo.side.x * offset,
-                y: armGeo.outboundFar.y + armGeo.side.y * offset,
+                x: armGeo.approachAnchor.x + armGeo.side.x * offset,
+                y: armGeo.approachAnchor.y + armGeo.side.y * offset,
             };
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
@@ -141,18 +141,11 @@ function drawMarkings() {
         ctx.lineTo(line.b.x, line.b.y);
         ctx.stroke();
     }
-
-    // 行人横道（4条，各方向停车线外侧）
-    ctx.setLineDash([]);
-    drawCrosswalk(c.x - roadHalf, c.y - CONFIG.stopLinePx - CONFIG.crosswalkWidthPx, roadHalf * 2, 12, "h");
-    drawCrosswalk(c.x - roadHalf, c.y + CONFIG.stopLinePx + 6,                        roadHalf * 2, 12, "h");
-    drawCrosswalk(c.x - CONFIG.stopLinePx - CONFIG.crosswalkWidthPx, c.y - roadHalf, 12, roadHalf * 2, "v");
-    drawCrosswalk(c.x + CONFIG.stopLinePx + 6,                        c.y - roadHalf, 12, roadHalf * 2, "v");
 }
 
 function drawCrosswalk(x, y, w, h, orientation) {
     ctx.fillStyle = "rgba(248,250,252,0.55)";
-    const stripes = 5;
+    const stripes = 6;
     for (let i = 0; i < stripes; i++) {
         if (orientation === "h") {
             ctx.fillRect(x + i * (w / stripes), y, w / (stripes * 1.8), h);
@@ -173,7 +166,7 @@ function drawLaneDirectionArrows() {
     for (const arm of DIRS) {
         const armGeo = geometry.arms[arm];
         const inboundDir = { x: -armGeo.dir.x, y: -armGeo.dir.y };
-        const arrowOriginDistance = 26;
+        const arrowOriginDistance = 30;
 
         for (const lane of ["left", "straight", "right"]) {
             const stopPoint = geometry.stopLines[laneId(arm, lane)].point;
@@ -182,38 +175,45 @@ function drawLaneDirectionArrows() {
                 y: stopPoint.y + armGeo.dir.y * arrowOriginDistance,
             };
 
-            ctx.beginPath();
-            ctx.moveTo(start.x, start.y);
-
             if (lane === "straight") {
-                const end = {
-                    x: start.x + inboundDir.x * 18,
-                    y: start.y + inboundDir.y * 18,
+                const stem = {
+                    x: start.x + inboundDir.x * 22,
+                    y: start.y + inboundDir.y * 22,
                 };
-                ctx.lineTo(end.x, end.y);
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(stem.x, stem.y);
                 ctx.stroke();
-                drawArrowHead(end, inboundDir, armGeo.side, 6);
+                drawArrowHead(stem, inboundDir, armGeo.side, 7);
                 continue;
             }
 
             const bendSign = lane === "left" ? 1 : -1;
-            const mid = {
+            // Straight stem first
+            const stemEnd = {
                 x: start.x + inboundDir.x * 10,
                 y: start.y + inboundDir.y * 10,
             };
-            const end = {
-                x: mid.x + armGeo.side.x * bendSign * 12,
-                y: mid.y + armGeo.side.y * bendSign * 12,
-            };
+            // Curve control and end
             const control = {
-                x: start.x + inboundDir.x * 16,
-                y: start.y + inboundDir.y * 16,
+                x: stemEnd.x + inboundDir.x * 8,
+                y: stemEnd.y + inboundDir.y * 8,
             };
+            const end = {
+                x: control.x + armGeo.side.x * bendSign * 10,
+                y: control.y + armGeo.side.y * bendSign * 10,
+            };
+
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(stemEnd.x, stemEnd.y);
             ctx.quadraticCurveTo(control.x, control.y, end.x, end.y);
             ctx.stroke();
+
+            // Tangent at t=1 of quadratic bezier: 2*(end - control)
             const tangent = {
-                x: inboundDir.x * 0.7 + armGeo.side.x * bendSign * 0.7,
-                y: inboundDir.y * 0.7 + armGeo.side.y * bendSign * 0.7,
+                x: end.x - control.x,
+                y: end.y - control.y,
             };
             drawArrowHead(end, tangent, armGeo.side, 6);
         }
@@ -241,63 +241,42 @@ function drawArrowHead(point, direction, side, size) {
 
 function drawSignals() {
     for (const arm of DIRS) {
-        const armGeo = geometry.arms[arm];
-        drawSignalSupport(armGeo);
+        const armDir = geometry.arms[arm].dir;
+
         for (const lane of ["left", "straight"]) {
             const key       = laneId(arm, lane);
             const head      = geometry.signalHeads[key];
             const stateName = state.signal.laneState[key];
-            drawSignalHead(head.x, head.y, stateName, Math.ceil(state.signal.countdown));
+            drawSignalHead(head.x, head.y, stateName, Math.ceil(state.signal.countdown), false, armDir);
         }
-        const rightHead = geometry.signalHeads[laneId(arm, "right")];
-        drawSignalHead(rightHead.x, rightHead.y, "green", null, true);
+        const rightHeadPos = geometry.signalHeads[laneId(arm, "right")];
+        drawSignalHead(rightHeadPos.x, rightHeadPos.y, "green", null, true, armDir);
     }
 }
 
 function drawSignalSupport(armGeo) {
-    const outerInbound = armGeo.inboundBoundaryOffsets[armGeo.inboundBoundaryOffsets.length - 1];
-    const poleOffset = outerInbound - CONFIG.laneWidthPx * 0.9;
-    const poleBase = {
-        x: armGeo.approachAnchor.x + armGeo.side.x * poleOffset + armGeo.dir.x * 18,
-        y: armGeo.approachAnchor.y + armGeo.side.y * poleOffset + armGeo.dir.y * 18,
-    };
-    const poleTop = {
-        x: poleBase.x + armGeo.side.x * 18,
-        y: poleBase.y + armGeo.side.y * 18,
-    };
-    const mastEnd = {
-        x: poleTop.x + armGeo.dir.x * 74,
-        y: poleTop.y + armGeo.dir.y * 74,
-    };
-
-    ctx.save();
-    ctx.strokeStyle = "rgba(148,163,184,0.75)";
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(poleBase.x, poleBase.y);
-    ctx.lineTo(poleTop.x, poleTop.y);
-    ctx.lineTo(mastEnd.x, mastEnd.y);
-    ctx.stroke();
-    ctx.restore();
+    // No longer needed - signals are placed directly in lanes
 }
 
-function drawSignalHead(x, y, active, countdown, rightTurn = false) {
+function drawSignalHead(x, y, active, countdown, rightTurn, armDir) {
+    const rotation = Math.atan2(armDir.y, armDir.x);
+
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(rotation);
 
-    // 灯箱背景
-    ctx.fillStyle   = "rgba(10,18,35,0.92)";
-    ctx.strokeStyle = "rgba(148,163,184,0.35)";
-    ctx.lineWidth   = 1;
-    roundedRectPath(ctx, -11, -23, 22, 50, 7);
+    // 灯箱背景（沿车道方向排列）
+    ctx.fillStyle   = "rgba(10,18,35,0.85)";
+    ctx.strokeStyle = "rgba(148,163,184,0.25)";
+    ctx.lineWidth   = 0.8;
+    roundedRectPath(ctx, -16, -8, 32, 16, 4);
     ctx.fill();
     ctx.stroke();
 
     // 三色灯
     const colorNames = ["red", "yellow", "green"];
     const hexColors  = { red: "#ef4444", yellow: "#facc15", green: "#22c55e" };
-    const yPos       = [-12, 0, 12];
+    const positions  = [-9, 0, 9];
 
     for (let i = 0; i < 3; i++) {
         const name = colorNames[i];
@@ -305,26 +284,29 @@ function drawSignalHead(x, y, active, countdown, rightTurn = false) {
         ctx.beginPath();
         ctx.fillStyle = on ? hexColors[name] : "rgba(55,65,81,0.6)";
         if (on) {
-            ctx.shadowBlur  = 12;
+            ctx.shadowBlur  = 8;
             ctx.shadowColor = hexColors[name];
         } else {
             ctx.shadowBlur = 0;
         }
-        ctx.arc(0, yPos[i], 4.6, 0, Math.PI * 2);
+        ctx.arc(positions[i], 0, 3.2, 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.shadowBlur = 0;
+    ctx.restore();
 
-    // 倒计时数字
-    ctx.textAlign = "center";
+    // 倒计时数字（信号灯上游方向，不旋转）
+    ctx.save();
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
     if (countdown !== null && !rightTurn) {
-        ctx.fillStyle = "#dbeafe";
-        ctx.font      = "bold 8px sans-serif";
-        ctx.fillText(`${Math.ceil(countdown)}`, 0, 24);
+        ctx.fillStyle = "rgba(220,235,254,0.85)";
+        ctx.font      = "bold 9px sans-serif";
+        ctx.fillText(`${Math.ceil(countdown)}`, x + armDir.x * 18, y + armDir.y * 18);
     } else if (rightTurn) {
-        ctx.fillStyle = "#a7f3d0";
-        ctx.font      = "7px sans-serif";
-        ctx.fillText("RT", 0, 24);
+        ctx.fillStyle = "rgba(167,243,208,0.75)";
+        ctx.font      = "bold 7px sans-serif";
+        ctx.fillText("RT", x + armDir.x * 18, y + armDir.y * 18);
     }
     ctx.restore();
 }
@@ -339,7 +321,8 @@ function drawQueueOverlays() {
         const stop     = geometry.arms[arm].approachAnchor;
         const dir      = geometry.arms[arm].dir;
         const side     = geometry.arms[arm].side;
-        const len      = queue.currentQueue * CONFIG.pixelPerMeter;
+        const maxLen   = CONFIG.approachLengthM * CONFIG.pixelPerMeter * 0.85;
+        const len      = Math.min(queue.currentQueue * CONFIG.pixelPerMeter, maxLen);
         ctx.save();
         ctx.fillStyle = queue.spillback
             ? "rgba(239,68,68,0.28)"
@@ -375,40 +358,64 @@ function drawVehicles() {
     for (const vehicle of ordered) {
         const p        = vehicle.positionPoint;
         const angle    = vehicle.angle;
-        const lengthPx = vehicle.length * CONFIG.pixelPerMeter * 1.45;
-        const widthPx  = vehicle.width  * CONFIG.pixelPerMeter * 1.8;
+        const lengthPx = vehicle.length * CONFIG.pixelPerMeter * 1.1;
+        const widthPx  = vehicle.width  * CONFIG.pixelPerMeter * 1.4;
 
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(angle + Math.PI / 2);
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = "rgba(15,23,42,0.35)";
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(15,23,42,0.4)";
 
         // 车身
-        ctx.fillStyle   = speedToColor(vehicle.vel, vehicle.v0);
-        ctx.strokeStyle = "rgba(10,18,35,0.7)";
-        ctx.lineWidth   = 0.8;
-        roundedRectPath(ctx, -widthPx / 2, -lengthPx / 2, widthPx, lengthPx, 3);
+        const bodyColor = speedToColor(vehicle.vel, vehicle.v0);
+        ctx.fillStyle   = bodyColor;
+        ctx.strokeStyle = "rgba(10,18,35,0.55)";
+        ctx.lineWidth   = 0.7;
+        roundedRectPath(ctx, -widthPx / 2, -lengthPx / 2, widthPx, lengthPx, 3.5);
         ctx.fill();
         ctx.stroke();
 
-        // 前窗亮条
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fillRect(-widthPx / 4, -lengthPx / 2 + 2.5, widthPx / 2, 1.8);
+        // 前窗玻璃
+        ctx.fillStyle = "rgba(180,220,255,0.55)";
+        roundedRectPath(ctx, -widthPx * 0.32, -lengthPx / 2 + 2.5, widthPx * 0.64, lengthPx * 0.18, 2);
+        ctx.fill();
 
-        // 车顶形成更清晰的视觉体块
-        ctx.fillStyle = "rgba(255,255,255,0.16)";
-        roundedRectPath(ctx, -widthPx * 0.24, -lengthPx * 0.18, widthPx * 0.48, lengthPx * 0.4, 2);
+        // 车顶高光
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        roundedRectPath(ctx, -widthPx * 0.22, -lengthPx * 0.12, widthPx * 0.44, lengthPx * 0.32, 2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // 刹车灯
+        // 前灯
+        ctx.fillStyle = "rgba(255,250,220,0.7)";
+        ctx.beginPath();
+        ctx.arc(-widthPx / 2 + 2.2, -lengthPx / 2 + 2.2, 1.5, 0, Math.PI * 2);
+        ctx.arc( widthPx / 2 - 2.2, -lengthPx / 2 + 2.2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 刹车灯 / 尾灯
         if (vehicle.acc < -1.5 || vehicle.vel < 0.5) {
-            ctx.fillStyle = "rgba(255,70,70,0.92)";
-            ctx.beginPath();
-            ctx.arc(-widthPx / 4, lengthPx / 2 - 2, 1.8, 0, Math.PI * 2);
-            ctx.arc( widthPx / 4, lengthPx / 2 - 2, 1.8, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = "rgba(255,50,50,0.95)";
+        } else {
+            ctx.fillStyle = "rgba(180,40,40,0.5)";
+        }
+        ctx.beginPath();
+        ctx.arc(-widthPx / 2 + 2.2, lengthPx / 2 - 2, 1.6, 0, Math.PI * 2);
+        ctx.arc( widthPx / 2 - 2.2, lengthPx / 2 - 2, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 转向灯（转弯车辆闪烁）
+        if (vehicle.turnIntent !== "straight") {
+            const blink = Math.floor(Date.now() / 400) % 2 === 0;
+            if (blink) {
+                ctx.fillStyle = "rgba(255,180,30,0.9)";
+                const signalSide = vehicle.turnIntent === "left" ? -1 : 1;
+                ctx.beginPath();
+                ctx.arc(signalSide * (widthPx / 2 - 1.5), -lengthPx / 2 + 1.5, 1.3, 0, Math.PI * 2);
+                ctx.arc(signalSide * (widthPx / 2 - 1.5),  lengthPx / 2 - 1.5, 1.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
         ctx.restore();
     }
@@ -468,26 +475,32 @@ function drawEducationLabels() {
         y += 18;
     }
 
-    // 各臂排队长度标注
-    for (const arm of DIRS) {
-        const stop = geometry.stopLines[laneId(arm, "straight")].point;
-        ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#cbd5e1";
-        ctx.fillText(t("canvas.queueLabel", {
-            arm: getDirectionLabel(arm),
-            queue: formatMeters(state.queueDetectors[arm].currentQueue)
-        }),
-                     stop.x + 14, stop.y - 12);
-    }
-
-    // 饱和流率标注
-    if (ui.showSat.checked) {
-        const nStop = geometry.stopLines[laneId("N", "straight")].point;
+    // 饱和流率标注（左上角，在线车辆后面）
+    if (ui.showSat.checked && state.performance.getMeasuredSaturation() > 0) {
         ctx.fillStyle = "#86efac";
         ctx.fillText(t("canvas.saturation", {
             value: Math.round(state.performance.getMeasuredSaturation())
-        }),
-                     nStop.x + 32, nStop.y + 18);
+        }), 24, y);
+        y += 18;
     }
+
+    // 各臂排队长度标注（路口中心区域内侧展示）
+    ctx.font = "11px sans-serif";
+    for (const arm of DIRS) {
+        const c = CONFIG.center;
+        const dir = geometry.arms[arm].dir;
+        const queueText = t("canvas.queueLabel", {
+            arm: getDirectionLabel(arm),
+            queue: formatMeters(state.queueDetectors[arm].currentQueue)
+        });
+        ctx.fillStyle = state.queueDetectors[arm].spillback ? "#f87171" : "#cbd5e1";
+        // Place label just inside the intersection box on the arm's side
+        const labelX = c.x - dir.x * (CONFIG.stopLinePx - 18);
+        const labelY = c.y - dir.y * (CONFIG.stopLinePx - 14);
+        ctx.textAlign = "center";
+        ctx.fillText(queueText, labelX, labelY);
+    }
+
     ctx.restore();
 
     // 底部弹出 overlay 提示条

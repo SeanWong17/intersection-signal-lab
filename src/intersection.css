@@ -366,7 +366,7 @@ button:active { transform: translateY(0);    filter: brightness(.96);  }
 
 .phase-row {
     display:               grid;
-    grid-template-columns: 24px 1fr 30px 22px;
+    grid-template-columns: 38px 1fr 30px 22px;
     gap:                   6px;
     align-items:           center;
     font-size:             .8rem;
@@ -376,14 +376,16 @@ button:active { transform: translateY(0);    filter: brightness(.96);  }
     display:         inline-flex;
     align-items:     center;
     justify-content: center;
-    width:           22px;
+    min-width:       34px;
     height:          22px;
     border-radius:   5px;
-    font-size:       .74rem;
+    font-size:       .72rem;
     font-weight:     700;
     background:      rgba(99,102,241,.18);
     color:           #a5b4fc;
     border:          1px solid rgba(99,102,241,.26);
+    white-space:     nowrap;
+    padding:         0 4px;
 }
 
 /* ── 原生 range 滑块 ───────────────────────────────────────────────────────── */

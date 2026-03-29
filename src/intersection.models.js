@@ -54,6 +54,9 @@ class Vehicle {
             ? TURN_TO_EXIT[this.arm][this.turnIntent]
             : this.arm;
         const dir = geometry.arms[arm].dir;
+        if (this.segment === "inbound") {
+            return Math.atan2(-dir.y, -dir.x);
+        }
         return Math.atan2(dir.y, dir.x);
     }
 }
@@ -66,10 +69,10 @@ class TrafficSignal {
         this.stage       = "green";   // green | yellow | allred
         this.stageTimer  = 0;
         this.offset      = 0;
-        this.greenTimes  = [52, 36];
+        this.greenTimes  = [35, 25];
         this.yellow      = CONFIG.yellowTime;
         this.allRed      = CONFIG.allRedTime;
-        this.cycleLength = 96;
+        this.cycleLength = 68;
         this.laneState   = {};
         this.countdown   = 0;
         this.applyLaneStates();
@@ -216,19 +219,31 @@ class QueueDetector {
     }
 
     update(vehicles) {
+        // Sort by position descending (closest to stop line first)
         const inbound = vehicles
             .filter(v => v.segment === "inbound" && v.arm === this.arm)
             .sort((a, b) => b.pos - a.pos);
-        let farthest = 0;
+        let queueEnd = 0;
+        let chainFront = -1;
         for (const v of inbound) {
             const distToStop = CONFIG.approachLengthM - v.pos;
-            if (distToStop >= 0 && distToStop <= CONFIG.approachLengthM && v.vel < 1.2) {
-                farthest = Math.max(farthest, distToStop + v.length);
+            if (distToStop < 0) continue;
+            // Gap check: between consecutive vehicles, or from stop line for the first
+            if (chainFront >= 0) {
+                const gap = chainFront - v.pos - v.length;
+                if (gap > 12) break;
+            } else {
+                // First vehicle: must be near the stop line to start a queue
+                if (distToStop > 20) break;
+            }
+            chainFront = v.pos;          // ALL vehicles maintain the chain
+            if (v.vel < 1.2) {           // only slow vehicles extend queue length
+                queueEnd = Math.max(queueEnd, distToStop + v.length);
             }
         }
-        this.currentQueue = farthest;
-        this.maxQueue     = Math.max(this.maxQueue, farthest);
-        this.spillback    = farthest > CONFIG.approachLengthM * 0.72;
+        this.currentQueue = queueEnd;
+        this.maxQueue     = Math.max(this.maxQueue, queueEnd);
+        this.spillback    = queueEnd > CONFIG.approachLengthM * 0.72;
     }
 }
 

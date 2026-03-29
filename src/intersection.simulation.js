@@ -21,7 +21,7 @@ const state = {
     performance: new PerformanceMonitor(),
     generator:   {},
     pendingArrivals: {},
-    armFlow:     { N: 800, E: 600, S: 800, W: 400 },
+    armFlow:     { N: 350, E: 300, S: 350, W: 250 },
     laneShares:  { left: 0.2, straight: 0.6, right: 0.2 },
     baseVehicleParams: {
         v0: 13.89,   // m/s（≈50 km/h）
@@ -167,16 +167,29 @@ function canVehicleAdvanceIntoIntersection(vehicle) {
         && canEnterIntersection(vehicle);
 }
 
+function movementsConflict(armA, turnA, armB, turnB) {
+    // Same arm, same turn — following in the same lane, no conflict
+    if (armA === armB && turnA === turnB) return false;
+    // Same arm, different turns — adjacent lanes, no conflict
+    if (armA === armB) return false;
+    // Opposite arms, both straight — no conflict (opposing through)
+    if (OPPOSITE_ARM[armA] === armB && turnA === "straight" && turnB === "straight") return false;
+    // Right turn only conflicts with crossing left turns from conflicting arms
+    if (turnA === "right" && turnB === "right") return false;
+    if (turnA === "right" && turnB !== "left") return false;
+    if (turnB === "right" && turnA !== "left") return false;
+    // All other combinations conflict
+    return true;
+}
+
 function canEnterIntersection(vehicle) {
     const buffer = vehicle.turnIntent === "right" ? 0.5 : 0.8;
     if (CONFIG.approachLengthM - vehicle.pos > buffer) return true;
-    const zone    = conflictZoneForTurn(vehicle.turnIntent);
     const enterAt = state.simTime;
     const leaveAt = state.simTime + reservationDuration(vehicle);
     for (const res of state.crossingReservations) {
         if (res.leaveAt < enterAt || res.enterAt > leaveAt) continue;
-        if (zone === "edge" && res.zone === "edge" && res.arm !== vehicle.arm) continue;
-        if (vehicle.turnIntent === "right" && res.arm === vehicle.arm) continue;
+        if (!movementsConflict(vehicle.arm, vehicle.turnIntent, res.arm, res.turn)) continue;
         return false;
     }
     return true;
@@ -186,7 +199,7 @@ function reserveIntersection(vehicle) {
     state.crossingReservations.push({
         id:      vehicle.id,
         arm:     vehicle.arm,
-        zone:    conflictZoneForTurn(vehicle.turnIntent),
+        turn:    vehicle.turnIntent,
         enterAt: state.simTime,
         leaveAt: state.simTime + reservationDuration(vehicle),
     });
@@ -283,10 +296,11 @@ function updateOutboundVehicles(dt) {
     }
 }
 
-function cleanupVehicles() {
+function cleanupVehicles(dt) {
     state.vehicles             = state.vehicles.filter(v => v.segment !== "departed");
     state.crossingReservations = state.crossingReservations.filter(r => r.leaveAt > state.simTime);
-    state.overlays             = state.overlays.filter(o => { o.ttl -= CONFIG.dt; return o.ttl > 0; });
+    for (const o of state.overlays) o.ttl -= dt;
+    state.overlays             = state.overlays.filter(o => o.ttl > 0);
 }
 
 function updateQueues() {
@@ -339,7 +353,7 @@ function stepSimulation(dt) {
     updateInboundVehicles(dt);
     updateCrossingVehicles(dt);
     updateOutboundVehicles(dt);
-    cleanupVehicles();
+    cleanupVehicles(dt);
     updateQueues();
     updateSpaceTime();
     state.simTime += dt;

@@ -136,9 +136,9 @@ assert.strictEqual(context.__spawnedCount, 2, "pending release should spawn a ne
 vm.runInContext(`
     globalThis.__qd = new QueueDetector("N");
     globalThis.__spillVehicles = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 20; i++) {
         const vehicle = new Vehicle(200 + i, "N", "straight", 0, state.baseVehicleParams);
-        vehicle.pos = 35 - i * 10;
+        vehicle.pos = CONFIG.approachLengthM - 2 - i * 8;
         vehicle.vel = 0;
         __spillVehicles.push(vehicle);
     }
@@ -178,5 +178,42 @@ vm.runInContext(`
 assert.strictEqual(context.__leftYielding, true, "left turn should yield to opposing through traffic");
 assert.strictEqual(context.__leftBlocked, false, "yielding left turn should not enter while opposing through is close");
 assert.strictEqual(context.__leftReleased, true, "left turn should proceed once opposing through traffic is no longer near");
+
+// ── 回归测试：直行路径线性验证 ──────────────────────────────────────────────────
+vm.runInContext(`
+    computeGeometry();
+    globalThis.__straightPathN = geometry.pathCache["N-straight"];
+`, context);
+const straightMid = context.__straightPathN.points[50];
+const straightStart = context.__straightPathN.points[0];
+assert(Math.abs(straightMid.x - straightStart.x) < 1,
+    `straight path midpoint x should match start x (diff=${Math.abs(straightMid.x - straightStart.x).toFixed(2)})`);
+
+// ── 回归测试：进口车辆朝向验证 ──────────────────────────────────────────────────
+vm.runInContext(`
+    setRandomSeed(42);
+    globalThis.__inboundN = new Vehicle(900, "N", "straight", 0, { v0: 13.89, T: 1.5, a: 1.2, b: 2.0, s0: 2.0 });
+    __inboundN.segment = "inbound";
+    globalThis.__inboundAngle = __inboundN.angle;
+`, context);
+// N arm dir is (0,-1), inbound should face toward center => angle ≈ π/2 (pointing south/downward)
+approxEqual(context.__inboundAngle, Math.PI / 2, 0.01);
+
+// ── 回归测试：右转路径范围验证 ──────────────────────────────────────────────────
+vm.runInContext(`
+    computeGeometry();
+    globalThis.__rightPathN = geometry.pathCache["N-right"];
+    globalThis.__centerX = CONFIG.center.x;
+    globalThis.__centerY = CONFIG.center.y;
+`, context);
+// N→W right turn: all path points should stay in the top-left quadrant relative to center
+// i.e. x <= center.x and y <= center.y (with small tolerance)
+const tolerance = 5;
+for (const pt of context.__rightPathN.points) {
+    assert(pt.x <= context.__centerX + tolerance,
+        `right turn N→W point should not extend east of center (x=${pt.x.toFixed(1)}, center=${context.__centerX})`);
+    assert(pt.y <= context.__centerY + tolerance,
+        `right turn N→W point should not extend south of center (y=${pt.y.toFixed(1)}, center=${context.__centerY})`);
+}
 
 console.log("release-check: all checks passed");

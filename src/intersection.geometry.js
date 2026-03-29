@@ -70,9 +70,7 @@ function computeGeometry() {
     const inboundBoundaryOffsets = getInboundBoundaryOffsets();
     const outboundBoundaryOffsets = getOutboundBoundaryOffsets();
     const signalLanes = ["left", "straight", "right"];
-    const signalSpacing = 30;
-    const signalUpstream = 28;
-    const signalOutside = CONFIG.laneWidthPx * 0.9;
+    const signalUpstream = 34;
 
     for (const arm of DIRS) {
         const dir  = DIR_VECTORS[arm];
@@ -104,12 +102,6 @@ function computeGeometry() {
             boundaryOffsets: getBoundaryOffsets(),
         };
 
-        const signalBaseOffset = inboundBoundaryOffsets[inboundBoundaryOffsets.length - 1] - signalOutside;
-        const signalBase = {
-            x: approachAnchor.x + side.x * signalBaseOffset + dir.x * signalUpstream,
-            y: approachAnchor.y + side.y * signalBaseOffset + dir.y * signalUpstream,
-        };
-
         signalLanes.forEach((lane, index) => {
             const offset = inboundLaneOffsets[lane];
             geometry.stopLines[laneId(arm, lane)] = {
@@ -127,8 +119,8 @@ function computeGeometry() {
                 },
             };
             geometry.signalHeads[laneId(arm, lane)] = {
-                x: signalBase.x + dir.x * signalSpacing * index,
-                y: signalBase.y + dir.y * signalSpacing * index,
+                x: approachAnchor.x + side.x * offset + dir.x * signalUpstream,
+                y: approachAnchor.y + side.y * offset + dir.y * signalUpstream,
             };
         });
     }
@@ -206,24 +198,24 @@ function buildCrossingPath(arm, turn) {
 
     if (turn === "straight") {
         const control = {
-            x: center.x + (armGeo.side.x - exitGeo.side.x) * 6,
-            y: center.y + (armGeo.side.y - exitGeo.side.y) * 6,
+            x: (start.x + end.x) / 2,
+            y: (start.y + end.y) / 2,
         };
         for (let i = 0; i <= 100; i++) points.push(bezierQuadratic(start, control, end, i / 100));
     } else if (turn === "left") {
         const p1 = {
-            x: start.x + armGeo.dir.x * 20 + armGeo.side.x * 8,
-            y: start.y + armGeo.dir.y * 20 + armGeo.side.y * 8,
+            x: start.x - armGeo.dir.x * 30,
+            y: start.y - armGeo.dir.y * 30,
         };
         const p2 = {
-            x: center.x - exitGeo.dir.x * 20 + exitGeo.side.x * 8,
-            y: center.y - exitGeo.dir.y * 20 + exitGeo.side.y * 8,
+            x: end.x - exitGeo.dir.x * 30,
+            y: end.y - exitGeo.dir.y * 30,
         };
         for (let i = 0; i <= 100; i++) points.push(bezierCubic(start, p1, p2, end, i / 100));
     } else {
         const control = {
-            x: center.x - armGeo.dir.x * 18 + armGeo.side.x * 14,
-            y: center.y - armGeo.dir.y * 18 + armGeo.side.y * 14,
+            x: start.x,
+            y: end.y,
         };
         for (let i = 0; i <= 100; i++) points.push(bezierQuadratic(start, control, end, i / 100));
     }
