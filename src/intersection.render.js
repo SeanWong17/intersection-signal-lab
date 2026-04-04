@@ -460,7 +460,8 @@ function drawEducationLabels() {
     ctx.save();
     ctx.font      = "13px sans-serif";
     ctx.textAlign = "left";
-    let y = 34;
+    const hudX = 24;
+    let y = 82;
     const lines = [
         t("canvas.simClock", { time: state.simTime.toFixed(1) }),
         t("canvas.currentPhase", {
@@ -471,7 +472,7 @@ function drawEducationLabels() {
     ];
     ctx.fillStyle = "rgba(220,232,252,0.9)";
     for (const line of lines) {
-        ctx.fillText(line, 24, y);
+        ctx.fillText(line, hudX, y);
         y += 18;
     }
 
@@ -480,7 +481,7 @@ function drawEducationLabels() {
         ctx.fillStyle = "#86efac";
         ctx.fillText(t("canvas.saturation", {
             value: Math.round(state.performance.getMeasuredSaturation())
-        }), 24, y);
+        }), hudX, y);
         y += 18;
     }
 
