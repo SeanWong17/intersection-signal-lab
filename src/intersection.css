@@ -41,6 +41,37 @@ body {
     line-height: 1.4;
 }
 
+.github-silent-link {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    color: rgba(226, 232, 248, 0.64);
+    background: rgba(15, 23, 42, 0.44);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.28);
+    backdrop-filter: blur(10px);
+    transition: color .18s ease, transform .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.github-silent-link:hover {
+    color: var(--text);
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(125, 211, 252, 0.4);
+    transform: translateY(-1px) scale(1.04);
+}
+
+.github-silent-link:focus-visible {
+    outline: 2px solid rgba(125, 211, 252, 0.72);
+    outline-offset: 2px;
+}
+
 /* ── 画布区域 ──────────────────────────────────────────────────────────────── */
 
 #canvas-wrap {
@@ -561,6 +592,13 @@ input[type="range"] {
 @media (max-width: 520px) {
     body {
         font-size: 13px;
+    }
+
+    .github-silent-link {
+        top: 12px;
+        left: 12px;
+        width: 40px;
+        height: 40px;
     }
 
     #canvas-wrap {
