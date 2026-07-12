@@ -59,8 +59,9 @@ const ui = {
 // ── 辅助：同步滑块值与显示标签 ────────────────────────────────────────────────
 
 function setSlider(input, display, value) {
-    input.value          = value;
-    display.textContent  = value;
+    input.value = value;
+    display.textContent = input.value;
+    return parseFloat(input.value);
 }
 
 function getSignalLostTime() {
@@ -118,8 +119,13 @@ function getCurrentSignalPlan() {
 }
 
 function syncCycleFromGreens() {
-    const greens = ui.green.map(input => parseFloat(input.value));
-    const cycle = greens.reduce((sum, value) => sum + value, 0) + getSignalLostTime();
+    let greens = ui.green.map(input => parseFloat(input.value));
+    const rawCycle = greens.reduce((sum, value) => sum + value, 0) + getSignalLostTime();
+    const cycle = clamp(rawCycle, parseFloat(ui.cycle.min), parseFloat(ui.cycle.max));
+    if (cycle !== rawCycle) {
+        greens = normalizeGreensToCycle(greens, cycle);
+        greens.forEach((value, index) => setSlider(ui.green[index], ui.greenValue[index], value));
+    }
     setSlider(ui.cycle, ui.cycleValue, cycle);
 }
 
@@ -139,7 +145,6 @@ function applySignalSettings() {
     const offset = parseFloat(ui.offset.value);
     state.signal.setPlan(greens, cycle, offset);
     state.signal.syncToTime(state.simTime);
-    state.signal.applyLaneStates();
 }
 
 // ── Webster 一键优化 ───────────────────────────────────────────────────────────
@@ -178,8 +183,7 @@ function setOversaturatedDemo() {
     state.demo.oversat = true;
     const flows = { N: 1700, E: 1500, S: 1700, W: 1400 };
     for (const arm of DIRS) {
-        state.armFlow[arm] = flows[arm];
-        setSlider(ui.flow[arm], ui.flowValue[arm], flows[arm]);
+        state.armFlow[arm] = setSlider(ui.flow[arm], ui.flowValue[arm], flows[arm]);
     }
     setSlider(ui.cycle, ui.cycleValue, 110);
     [54, 48].forEach((g, idx) => setSlider(ui.green[idx], ui.greenValue[idx], g));
@@ -282,6 +286,7 @@ function updatePerformanceUI() {
     if (popup && ["webster", "greenwave", "overflow"].includes(popup.type)) {
         alerts.push({ cls: popup.type === "overflow" ? "warn" : "info", text: getOverlayText(popup) });
     }
+    if (!alerts.length) alerts.push({ cls: "neutral", text: t("alert.normal") });
     ui.alerts.innerHTML = alerts.slice(0, 4)
         .map(a => `<div class="alert ${a.cls}">${a.text}</div>`).join("");
 }
@@ -296,6 +301,10 @@ function updateUI() {
     ui.headwayValue.textContent     = ui.headway.value;
     ui.green.forEach((el, idx) => { ui.greenValue[idx].textContent = el.value; });
     ui.btnSpeedLabel.textContent    = formatSpeedButtonLabel(CONFIG.timeWarp);
+    ui.btnRun.classList.toggle("is-active", state.running);
+    ui.btnPause.classList.toggle("is-active", !state.running);
+    ui.btnRun.setAttribute("aria-pressed", `${state.running}`);
+    ui.btnPause.setAttribute("aria-pressed", `${!state.running}`);
     updatePerformanceUI();
 }
 
@@ -303,10 +312,16 @@ function updateUI() {
 
 function resizeCanvas() {
     const rect        = document.getElementById("canvas-wrap").getBoundingClientRect();
-    canvas.width      = rect.width;
-    canvas.height     = rect.height;
-    CONFIG.center.x   = rect.width * 0.5;
-    CONFIG.center.y   = rect.height * 0.5;
+    const width       = Math.max(1, Math.round(rect.width));
+    const height      = Math.max(1, Math.round(rect.height));
+    const pixelRatio  = clamp(window.devicePixelRatio || 1, 1, 2);
+    canvas.width      = Math.round(width * pixelRatio);
+    canvas.height     = Math.round(height * pixelRatio);
+    canvas.viewWidth  = width;
+    canvas.viewHeight = height;
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    CONFIG.center.x   = width * 0.5;
+    CONFIG.center.y   = height * 0.5;
     computeGeometry();
     refreshVehicleGeometry();
 }
@@ -348,8 +363,8 @@ function bindUI() {
     bindRange(ui.desiredSpeed, () => { state.baseVehicleParams.v0 = parseFloat(ui.desiredSpeed.value) / 3.6; });
     bindRange(ui.headway,      () => { state.baseVehicleParams.T  = parseFloat(ui.headway.value); });
 
-    ui.btnRun.addEventListener("click",   () => { state.running = true; });
-    ui.btnPause.addEventListener("click", () => { state.running = false; });
+    ui.btnRun.addEventListener("click",   () => { state.running = true; updateUI(); });
+    ui.btnPause.addEventListener("click", () => { state.running = false; updateUI(); });
     ui.btnReset.addEventListener("click", resetSimulation);
     ui.btnSpeed.addEventListener("click", () => {
         CONFIG.timeWarp = CONFIG.timeWarp === 1 ? 2 : CONFIG.timeWarp === 2 ? 4 : 1;
@@ -366,14 +381,10 @@ function bindUI() {
     canvas.addEventListener("click", (e) => {
         if (!ui.showSpaceTime.checked) return;
         const rect   = canvas.getBoundingClientRect();
-        const cx     = (e.clientX - rect.left) * (canvas.width  / rect.width);
-        const cy     = (e.clientY - rect.top)  * (canvas.height / rect.height);
-        const W = 290, H = 165;
-        const winX = canvas.width  - W - 16;
-        const winY = canvas.height - H - 16;
-        const btnW = 22, btnH = 14, btnGap = 3;
-        const btnStartX = winX + W - 12 - (btnW + btnGap) * 4 + btnGap;
-        const btnY = winY + 7;
+        const cx = e.clientX - rect.left;
+        const cy = e.clientY - rect.top;
+        const layout = getSpaceTimeLayout();
+        const { btnW, btnH, btnGap, btnStartX, btnY } = layout;
         for (let i = 0; i < DIRS.length; i++) {
             const bx = btnStartX + i * (btnW + btnGap);
             if (cx >= bx && cx <= bx + btnW && cy >= btnY && cy <= btnY + btnH) {
@@ -384,6 +395,11 @@ function bindUI() {
     });
 
     window.addEventListener("resize", resizeCanvas);
+    if (typeof ResizeObserver !== "undefined") {
+        const resizeObserver = new ResizeObserver(resizeCanvas);
+        resizeObserver.observe(document.getElementById("canvas-wrap"));
+    }
+    document.addEventListener("visibilitychange", () => { state.lastFrame = 0; });
 }
 
 // ── 主循环 ─────────────────────────────────────────────────────────────────────
@@ -399,7 +415,10 @@ function frame(ts) {
             stepSimulation(CONFIG.dt);
             state.accumulator -= CONFIG.dt;
         }
-        updatePerformanceUI();
+        if (ts - state.lastPerformanceUiUpdate >= 250) {
+            updatePerformanceUI();
+            state.lastPerformanceUiUpdate = ts;
+        }
     }
     draw();
     requestAnimationFrame(frame);
@@ -409,6 +428,7 @@ function frame(ts) {
 
 resizeCanvas();
 bindUI();
+if (window.matchMedia("(max-width: 520px)").matches) ui.showSpaceTime.checked = false;
 setLanguage(getCurrentLanguage());
 updateUI();
 resetSimulation();

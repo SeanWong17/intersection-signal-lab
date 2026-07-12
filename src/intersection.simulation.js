@@ -7,6 +7,7 @@ const state = {
     running:    false,
     simTime:    0,
     lastFrame:  0,
+    lastPerformanceUiUpdate: 0,
     accumulator: 0,
     vehicleId:  1,
     vehicles:   [],
@@ -32,7 +33,9 @@ const state = {
     },
     crossingReservations: [],
     overlays:    [],
+    overflowNoticeTimes: {},
     spaceTime:   { N: [], E: [], S: [], W: [] },
+    nextSpaceTimeSample: 0,
     spaceTimeArm: "N",
     demo: {
         greenWave: false,
@@ -86,12 +89,16 @@ function spawnVehicle(arm, turn) {
     const key = laneId(arm, turn);
     const laneVehicles = state.lanes[key];
     if (laneVehicles.length >= CONFIG.maxVehiclesPerLane) {
-        state.overlays.push({
-            type: "overflow",
-            messageKey: "overlay.overflow",
-            messageParams: { arm },
-            ttl: 3.5
-        });
+        const lastNotice = state.overflowNoticeTimes[key] ?? Number.NEGATIVE_INFINITY;
+        if (state.simTime - lastNotice >= CONFIG.overflowNoticeCooldown) {
+            state.overlays.push({
+                type: "overflow",
+                messageKey: "overlay.overflow",
+                messageParams: { arm },
+                ttl: 3.5
+            });
+            state.overflowNoticeTimes[key] = state.simTime;
+        }
         return false;
     }
     const first = laneVehicles[0];
@@ -313,6 +320,9 @@ function updateQueues() {
 }
 
 function updateSpaceTime() {
+    if (state.simTime + 1e-9 < state.nextSpaceTimeSample) return;
+    state.nextSpaceTimeSample = state.simTime + CONFIG.spaceTimeSampleInterval;
+
     for (const v of state.vehicles) {
         if (v.segment === "inbound") {
             state.spaceTime[v.arm].push({ t: state.simTime, x: v.pos, speed: v.vel });
@@ -320,9 +330,10 @@ function updateSpaceTime() {
     }
     const cutoff = state.simTime - 80;
     for (const arm of DIRS) {
-        while (state.spaceTime[arm].length && state.spaceTime[arm][0].t < cutoff) {
-            state.spaceTime[arm].shift();
-        }
+        const samples = state.spaceTime[arm];
+        const firstVisible = samples.findIndex(sample => sample.t >= cutoff);
+        if (firstVisible > 0) samples.splice(0, firstVisible);
+        if (firstVisible === -1 && samples.length) samples.length = 0;
     }
 }
 
@@ -331,12 +342,15 @@ function updateSpaceTime() {
 function resetSimulation() {
     state.simTime    = 0;
     state.lastFrame  = 0;
+    state.lastPerformanceUiUpdate = 0;
     state.accumulator = 0;
     state.vehicleId  = 1;
     state.vehicles   = [];
     state.crossingReservations = [];
     state.overlays   = [];
+    state.overflowNoticeTimes = {};
     state.spaceTime  = { N: [], E: [], S: [], W: [] };
+    state.nextSpaceTimeSample = 0;
     state.demo.oversat   = false;
     state.demo.greenWave = false;
     state.demo.greenWaveSnapshot = null;

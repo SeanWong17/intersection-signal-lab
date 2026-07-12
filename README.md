@@ -74,6 +74,16 @@ index.html?seed=20260324
 - 支持 Safari / Firefox 最新版
 - 如需录制稳定的演示素材，建议使用固定随机种子
 
+## 质量检查
+
+项目包含不依赖第三方包的模型与发布回归检查：
+
+```bash
+node tests/release-check.js
+```
+
+检查覆盖固定随机种子、Webster 配时、v/c、排队检测、左转让行、车辆路径、时空图采样与过饱和场景参数一致性。
+
 ## 目录结构
 
 - `media/demo.gif`：README 使用的演示动图，展示场景切换和交互流程。
@@ -90,6 +100,7 @@ index.html?seed=20260324
 - `src/intersection.render.js`：画布绘制逻辑，包括车辆、排队覆盖、标注和时空图。
 - `src/intersection.simulation.js`：车辆生成、跟驰、放行和仿真时间推进逻辑。
 - `src/intersection.ui.js`：控件绑定、场景切换、指标刷新和 UI 状态同步。
+- `tests/release-check.js`：核心模型、仿真约束与发布参数回归检查。
 
 ## 致谢
 

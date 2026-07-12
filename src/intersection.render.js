@@ -6,8 +6,10 @@
 // ── 背景 ──────────────────────────────────────────────────────────────────────
 
 function drawBackground() {
+    const width = canvas.viewWidth || canvas.clientWidth || canvas.width;
+    const height = canvas.viewHeight || canvas.clientHeight || canvas.height;
     ctx.fillStyle = "#0f172a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, width, height);
 
     const g = ctx.createRadialGradient(
         CONFIG.center.x, CONFIG.center.y, 120,
@@ -16,7 +18,7 @@ function drawBackground() {
     g.addColorStop(0, "rgba(56,189,248,0.08)");
     g.addColorStop(1, "rgba(15,23,42,0)");
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, width, height);
 }
 
 // ── 路面 ──────────────────────────────────────────────────────────────────────
@@ -407,7 +409,7 @@ function drawVehicles() {
 
         // 转向灯（转弯车辆闪烁）
         if (vehicle.turnIntent !== "straight") {
-            const blink = Math.floor(Date.now() / 400) % 2 === 0;
+            const blink = Math.floor(state.simTime / 0.4) % 2 === 0;
             if (blink) {
                 ctx.fillStyle = "rgba(255,180,30,0.9)";
                 const signalSide = vehicle.turnIntent === "left" ? -1 : 1;
@@ -458,10 +460,12 @@ function drawGreenWaveGuides() {
 
 function drawEducationLabels() {
     ctx.save();
-    ctx.font      = "13px sans-serif";
+    const viewportWidth = canvas.viewWidth || canvas.clientWidth || canvas.width;
+    const compact = viewportWidth < 520;
+    ctx.font      = compact ? "11px sans-serif" : "13px sans-serif";
     ctx.textAlign = "left";
-    const hudX = 24;
-    let y = 82;
+    const hudX = compact ? 20 : 24;
+    let y = compact ? 31 : 82;
     const lines = [
         t("canvas.simClock", { time: state.simTime.toFixed(1) }),
         t("canvas.currentPhase", {
@@ -470,6 +474,13 @@ function drawEducationLabels() {
         }),
         t("canvas.onlineVehicles", { count: state.vehicles.length })
     ];
+    if (compact) {
+        ctx.fillStyle = "rgba(8, 13, 21, 0.82)";
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.22)";
+        roundedRectPath(ctx, 10, 10, Math.min(350, viewportWidth - 20), 64, 8);
+        ctx.fill();
+        ctx.stroke();
+    }
     ctx.fillStyle = "rgba(220,232,252,0.9)";
     for (const line of lines) {
         ctx.fillText(line, hudX, y);
@@ -514,22 +525,35 @@ function drawEducationLabels() {
     ctx.fillStyle   = isErr ? "rgba(239,68,68,0.2)"   : "rgba(59,130,246,0.18)";
     ctx.strokeStyle = isErr ? "rgba(248,113,113,0.6)" : "rgba(125,211,252,0.5)";
     ctx.lineWidth   = 1;
-    roundedRectPath(ctx, 24, canvas.height - 90, 380, 44, 12);
+    const viewportHeight = canvas.viewHeight || canvas.clientHeight || canvas.height;
+    const overlayWidth = Math.min(380, Math.max(180, viewportWidth - 32));
+    roundedRectPath(ctx, 16, viewportHeight - 68, overlayWidth, 44, 8);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "#e6edf8";
     ctx.font      = "14px sans-serif";
-    ctx.fillText(getOverlayText(overlay), 40, canvas.height - 62);
+    ctx.fillText(getOverlayText(overlay), 30, viewportHeight - 40, overlayWidth - 28);
     ctx.restore();
 }
 
 // ── 时空图小窗口 ───────────────────────────────────────────────────────────────
 
+function getSpaceTimeLayout() {
+    const viewportWidth = canvas.viewWidth || canvas.clientWidth || canvas.width;
+    const viewportHeight = canvas.viewHeight || canvas.clientHeight || canvas.height;
+    const W = Math.min(290, Math.max(160, viewportWidth - 24));
+    const H = W < 240 ? 132 : 165;
+    const x = viewportWidth - W - 12;
+    const y = viewportHeight - H - 12;
+    const btnW = 22, btnH = 14, btnGap = 3;
+    const btnStartX = x + W - 12 - (btnW + btnGap) * 4 + btnGap;
+    const btnY = y + 7;
+    return { W, H, x, y, btnW, btnH, btnGap, btnStartX, btnY };
+}
+
 function drawSpaceTimeWindow() {
     if (!ui.showSpaceTime.checked) return;
-    const W = 290, H = 165;
-    const x = canvas.width  - W - 16;
-    const y = canvas.height - H - 16;
+    const { W, H, x, y, btnW, btnH, btnGap, btnStartX, btnY } = getSpaceTimeLayout();
     const arm = state.spaceTimeArm;
 
     ctx.save();
@@ -547,9 +571,6 @@ function drawSpaceTimeWindow() {
     ctx.fillText(t("canvas.spaceTimeTitle", { arm: getDirectionLabel(arm) }), x + 12, y + 17);
 
     // 方向切换按钮（右上角）
-    const btnW = 22, btnH = 14, btnGap = 3;
-    const btnStartX = x + W - 12 - (btnW + btnGap) * 4 + btnGap;
-    const btnY = y + 7;
     ctx.font = "bold 9px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";

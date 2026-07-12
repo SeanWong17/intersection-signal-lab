@@ -71,6 +71,8 @@ const CONFIG = {
     maxVehiclesPerLane: 45,        // 每车道最大排队数
     dt: 0.05,                      // 物理步长（s）
     timeWarp: 1,                   // 时间倍速
+    spaceTimeSampleInterval: 0.25, // 时空图采样周期（s）
+    overflowNoticeCooldown: 2,     // 同一车道溢出提示冷却（s）
     ghostLength: 0,
     leftTurnYieldLookaheadM: 36,   // 左转默认让行的对向直行感知距离
     leftTurnImmediateHazardM: 14,  // 长等待后仍必须让行的立即冲突距离

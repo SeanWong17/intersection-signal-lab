@@ -219,9 +219,19 @@ class QueueDetector {
     }
 
     update(vehicles) {
-        // Sort by position descending (closest to stop line first)
+        let longestQueue = 0;
+        for (const lane of ["left", "straight", "right"]) {
+            const laneQueue = this.measureLaneQueue(vehicles, lane);
+            longestQueue = Math.max(longestQueue, laneQueue);
+        }
+        this.currentQueue = longestQueue;
+        this.maxQueue     = Math.max(this.maxQueue, longestQueue);
+        this.spillback    = longestQueue > CONFIG.approachLengthM * 0.72;
+    }
+
+    measureLaneQueue(vehicles, lane) {
         const inbound = vehicles
-            .filter(v => v.segment === "inbound" && v.arm === this.arm)
+            .filter(v => v.segment === "inbound" && v.arm === this.arm && v.lane === lane)
             .sort((a, b) => b.pos - a.pos);
         let queueEnd = 0;
         let chainFront = -1;
@@ -241,9 +251,7 @@ class QueueDetector {
                 queueEnd = Math.max(queueEnd, distToStop + v.length);
             }
         }
-        this.currentQueue = queueEnd;
-        this.maxQueue     = Math.max(this.maxQueue, queueEnd);
-        this.spillback    = queueEnd > CONFIG.approachLengthM * 0.72;
+        return queueEnd;
     }
 }
 

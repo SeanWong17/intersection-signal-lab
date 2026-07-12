@@ -1,6 +1,11 @@
 const LANG_STORAGE_KEY = "intersection-lang";
 const DEFAULT_LANG = (() => {
-    const saved = localStorage.getItem(LANG_STORAGE_KEY);
+    let saved = null;
+    try {
+        saved = localStorage.getItem(LANG_STORAGE_KEY);
+    } catch (_) {
+        // Storage may be unavailable for local files or hardened browser profiles.
+    }
     if (saved === "zh" || saved === "en") return saved;
     return (navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
 })();
@@ -56,6 +61,7 @@ const I18N = {
         "alert.highVC": "{arm} 进口 v/c > 0.9，接近过饱和，队列将持续增长",
         "alert.spillback": "⚠ {arm} 进口排队溢出，干扰上游路段",
         "alert.saturation": "排队启动流率估计: {value} 辆/h/车道",
+        "alert.normal": "运行状态正常，未检测到排队溢出或过饱和进口",
         "canvas.idealArrival": "理想到达 {offset}s",
         "canvas.simClock": "仿真时钟 {time} s",
         "canvas.currentPhase": "当前相位 {phase} {stage}",
@@ -117,6 +123,7 @@ const I18N = {
         "alert.highVC": "{arm} approach v/c > 0.9, near oversaturation with sustained queue growth",
         "alert.spillback": "⚠ {arm} approach queue spillback affects upstream traffic",
         "alert.saturation": "Estimated queue discharge rate: {value} veh/h/lane",
+        "alert.normal": "Operating normally; no queue spillback or oversaturated approach detected",
         "canvas.idealArrival": "Ideal arrival {offset}s",
         "canvas.simClock": "Simulation clock {time} s",
         "canvas.currentPhase": "Current phase {phase} {stage}",
@@ -235,7 +242,11 @@ function renderStaticI18n() {
 function setLanguage(lang) {
     if (lang !== "zh" && lang !== "en") return;
     i18nState.lang = lang;
-    localStorage.setItem(LANG_STORAGE_KEY, lang);
+    try {
+        localStorage.setItem(LANG_STORAGE_KEY, lang);
+    } catch (_) {
+        // Language still applies for the current session when storage is blocked.
+    }
     renderStaticI18n();
     if (typeof updateUI === "function") updateUI();
     if (typeof updatePerformanceUI === "function") updatePerformanceUI();

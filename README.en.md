@@ -74,6 +74,16 @@ The canvas shows vehicles, stop lines, signal heads, queue overlays, status mess
 - Supported: latest Safari and Firefox
 - For stable recordings, use a fixed seed
 
+## Quality Check
+
+Run the dependency-free model and release regression checks with:
+
+```bash
+node tests/release-check.js
+```
+
+The checks cover deterministic randomness, Webster timing, v/c ratios, queue detection, permissive left turns, vehicle paths, space-time sampling, and oversaturated scenario consistency.
+
 ## Repository Layout
 
 - `media/demo.gif`: animated preview used in the README.
@@ -90,6 +100,7 @@ The canvas shows vehicles, stop lines, signal heads, queue overlays, status mess
 - `src/intersection.render.js`: canvas rendering for vehicles, overlays, labels, and the space-time view.
 - `src/intersection.simulation.js`: vehicle generation, car-following, discharge, and simulation time update logic.
 - `src/intersection.ui.js`: control binding, scenario switching, metric refresh, and UI state synchronization.
+- `tests/release-check.js`: regression checks for the core model, simulation constraints, and release settings.
 
 ## Acknowledgements
 
