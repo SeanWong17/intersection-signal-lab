@@ -43,7 +43,7 @@ function computeCriticalLaneAnalysis(armFlow, laneShares, satFlowPerLane = CONFI
     });
     const criticalRatiosByArm = criticalFlowsByArm.map(flow => flow / satFlowPerLane);
     const phaseCriticalFlows = PHASES.map(phase =>
-        phase.arms.reduce((sum, arm) => sum + Math.max(laneFlows[arm].left, laneFlows[arm].straight), 0)
+        Math.max(...phase.arms.map(arm => Math.max(laneFlows[arm].left, laneFlows[arm].straight)))
     );
     const phaseCriticalRatios = phaseCriticalFlows.map(flow => flow / satFlowPerLane);
 

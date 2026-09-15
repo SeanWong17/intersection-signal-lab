@@ -249,7 +249,7 @@ function drawSignals() {
             const key       = laneId(arm, lane);
             const head      = geometry.signalHeads[key];
             const stateName = state.signal.laneState[key];
-            drawSignalHead(head.x, head.y, stateName, Math.ceil(state.signal.countdown), false, armDir);
+            drawSignalHead(head.x, head.y, stateName, state.signal.getLaneCountdown(arm, lane, state.simTime), false, armDir, lane === "left" ? "L" : "T");
         }
         const rightHeadPos = geometry.signalHeads[laneId(arm, "right")];
         drawSignalHead(rightHeadPos.x, rightHeadPos.y, "green", null, true, armDir);
@@ -260,7 +260,7 @@ function drawSignalSupport(armGeo) {
     // No longer needed - signals are placed directly in lanes
 }
 
-function drawSignalHead(x, y, active, countdown, rightTurn, armDir) {
+function drawSignalHead(x, y, active, countdown, rightTurn, armDir, movement = "RT") {
     const rotation = Math.atan2(armDir.y, armDir.x);
 
     ctx.save();
@@ -301,14 +301,13 @@ function drawSignalHead(x, y, active, countdown, rightTurn, armDir) {
     ctx.save();
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "bold 8px sans-serif";
+    ctx.fillText(movement, x - armDir.y * 12, y + armDir.x * 12);
     if (countdown !== null && !rightTurn) {
         ctx.fillStyle = "rgba(220,235,254,0.85)";
         ctx.font      = "bold 9px sans-serif";
         ctx.fillText(`${Math.ceil(countdown)}`, x + armDir.x * 18, y + armDir.y * 18);
-    } else if (rightTurn) {
-        ctx.fillStyle = "rgba(167,243,208,0.75)";
-        ctx.font      = "bold 7px sans-serif";
-        ctx.fillText("RT", x + armDir.x * 18, y + armDir.y * 18);
     }
     ctx.restore();
 }
@@ -338,8 +337,8 @@ function drawQueueOverlays() {
         const outerY = stop.y + side.y * outerOffset;
         ctx.moveTo(centerX,                     centerY);
         ctx.lineTo(outerX,                      outerY);
-        ctx.lineTo(outerX - dir.x * len,        outerY - dir.y * len);
-        ctx.lineTo(centerX - dir.x * len,       centerY - dir.y * len);
+        ctx.lineTo(outerX + dir.x * len,        outerY + dir.y * len);
+        ctx.lineTo(centerX + dir.x * len,       centerY + dir.y * len);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
@@ -647,10 +646,10 @@ function draw() {
     drawRoadSurface();
     drawMarkings();
     drawLaneDirectionArrows();
-    drawSignals();
     drawQueueOverlays();
     drawGreenWaveGuides();
     drawVehicles();
     drawSpaceTimeWindow();
     drawEducationLabels();
+    drawSignals();
 }

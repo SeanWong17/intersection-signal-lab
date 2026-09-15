@@ -191,8 +191,6 @@ function movementsConflict(armA, turnA, armB, turnB) {
 }
 
 function canEnterIntersection(vehicle) {
-    const buffer = vehicle.turnIntent === "right" ? 0.5 : 0.8;
-    if (CONFIG.approachLengthM - vehicle.pos > buffer) return true;
     const enterAt = state.simTime;
     const leaveAt = state.simTime + reservationDuration(vehicle);
     for (const res of state.crossingReservations) {

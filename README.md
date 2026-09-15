@@ -1,8 +1,34 @@
-# 十字路口信号控制仿真
+<div align="center">
 
-[English](./README.en.md)
+# Intersection Signal Lab
 
-一个可直接在浏览器打开的单点交叉口信号控制仿真页面，用于展示不同流量与配时条件下的路口运行状态。页面提供实时指标、场景切换和进口时空图，适合用于演示和观察单路口信号控制效果。
+**十字路口信号控制仿真 · 左转让行观察 · 配时与排队可视化**
+
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![Canvas](https://img.shields.io/badge/Canvas-2D-0891b2?style=flat-square)
+[![MIT](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](./LICENSE)
+
+**[在线体验](https://seanwong17.github.io/intersection-signal-lab/) · [English](./README.en.md) · [反馈问题](https://github.com/SeanWong17/intersection-signal-lab/issues)**
+
+调整车流与绿灯时间，观察车辆如何排队、放行，以及左转为何在绿灯时仍需等待。
+
+</div>
+
+![交叉口仿真演示：默认运行、Webster 配时、过饱和与相位差场景](./media/demo.gif)
+
+演示使用英文界面，应用支持中英文切换。[观看 MP4 演示](./media/demo.mp4)。
+
+纯前端、无需安装依赖，直接打开 `index.html` 即可运行。适合交通工程学习、课堂演示与仿真代码实验。
+
+## 核心能力
+
+| 模块 | 可观察和调整的内容 |
+|---|---|
+| 信号控制 | 南北 / 东西两相位，周期、绿灯时间与相位差，各进口独立倒计时 |
+| 车辆运行 | 泊松到达、IDM 跟驰、左转让行、路口冲突预约 |
+| 拥堵观察 | 四进口独立需求、上游排队覆盖、过饱和场景 |
+| 配时分析 | Webster 建议配时、v/c、LOS、平均延误与启动流率 |
+| 可视化 | 实时车辆、中央分隔带信号灯、四进口时空图、中英文界面 |
 
 ## 功能
 
@@ -25,13 +51,15 @@
 - 启动流率：根据排队放行头时距估计，单位为 `辆/h/车道`
 - 绿波场景：单点相位差示意，不包含走廊级协调控制
 
-## 预览
+### 左转绿灯为什么还会停车？
 
-在线体验：<https://seanwong17.github.io/intersection-signal-lab/>
+本项目没有独立的保护左转相位。南北或东西对向同时放行时，左转与对向直行同绿，左转车辆仍需等待对向直行空档和路口冲突预约释放。红灯表示信号禁止通行，绿灯表示信号允许通行，但不保证车辆能立即进入路口。
 
-## 演示动图
+中央分隔带的 `L`、`T`、`RT` 分别对应左转、直行、右转，按距停车线由近到远排列。红灯数字表示距下一次变绿的时间，绿灯与黄灯数字表示当前灯色剩余时间。
 
-![演示动图](./media/demo.gif)
+### 适用范围
+
+这是教学用简化模型，不是经过实测标定的道路设计工具。Webster 采用同时放行进口的最大关键流量比，未单独标定许可左转容量；路口冲突预约使用保守的运动冲突表。平均延误基于已离场车辆，未包含仍在排队车辆及场外积压的等待时间。绿波按钮仅演示单点相位差，不代表真实多路口协调。
 
 ## 快速开始
 
@@ -82,11 +110,12 @@ index.html?seed=20260324
 node tests/release-check.js
 ```
 
-检查覆盖固定随机种子、Webster 配时、v/c、排队检测、左转让行、车辆路径、时空图采样与过饱和场景参数一致性。
+检查覆盖固定随机种子、Webster 配时、v/c、排队检测、左转让行、车头到线时的冲突拦截、分进口倒计时及相位差、车辆路径、时空图采样与过饱和场景参数一致性。
 
 ## 目录结构
 
 - `media/demo.gif`：README 使用的演示动图，展示场景切换和交互流程。
+- `media/demo.mp4`：同一演示的 MP4 版本。
 - `index.html`：页面入口，定义画布、控制面板和各类 UI 节点。
 - `LICENSE`：项目开源协议。
 - `README.md`：中文使用说明。

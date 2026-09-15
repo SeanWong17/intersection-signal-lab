@@ -59,10 +59,10 @@ vm.runInContext(`
         { satFlowPerLane: 1800, lostTimePerPhase: 4, minCycle: 40, maxCycle: 120, minGreen: 10, maxGreen: 70 }
     );
 `, context);
-assert.deepStrictEqual(Array.from(context.__plan.greens), [69, 43], "unexpected Webster green split");
-assert.strictEqual(context.__plan.adjustedCycle, 120, "unexpected Webster cycle length");
-approxEqual(context.__plan.criticalRatios[0], 960 / 1800);
-approxEqual(context.__plan.criticalRatios[1], 600 / 1800);
+assert.deepStrictEqual(Array.from(context.__plan.greens), [18, 14], "unexpected Webster green split");
+assert.strictEqual(context.__plan.adjustedCycle, 40, "unexpected Webster cycle length");
+approxEqual(context.__plan.criticalRatios[0], 480 / 1800);
+approxEqual(context.__plan.criticalRatios[1], 360 / 1800);
 
 vm.runInContext(`
     globalThis.__vc = computeApproachVCRatios(
@@ -268,5 +268,55 @@ assert.strictEqual(context.__overflowNoticeCount, 1, "lane overflow notices shou
 const pageSource = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const highFlowRanges = pageSource.match(/id="flow(?:North|East|South|West)"[^>]+max="1800"/g) || [];
 assert.strictEqual(highFlowRanges.length, 4, "all flow sliders must represent the oversaturated demo values");
+
+vm.runInContext(`
+    state.simTime = 10;
+    state.signal = new TrafficSignal();
+    state.signal.syncToTime(10);
+    const entrant = new Vehicle(999, "N", "left", 0, state.baseVehicleParams);
+    entrant.length = 4.8;
+    entrant.pos = CONFIG.approachLengthM - entrant.length / 2;
+    entrant.vel = 1;
+    state.vehicles = [entrant];
+    rebuildLaneBuckets();
+    state.crossingReservations = [{id:998, arm:"S", turn:"straight", enterAt:9, leaveAt:20}];
+    updateInboundVehicles(CONFIG.dt);
+    globalThis.__blockedSegment = entrant.segment;
+    state.crossingReservations = [];
+    globalThis.__clearEntry = canVehicleAdvanceIntoIntersection(entrant);
+    globalThis.__redCountdown = [0, 35, 38, 39].map(time => state.signal.getLaneCountdown("E", "left", time));
+    globalThis.__wrapCountdown = state.signal.getLaneCountdown("N", "straight", 67);
+    state.signal.offset = 8;
+    globalThis.__offsetCountdown = state.signal.getLaneCountdown("E", "straight", 0);
+`, context);
+assert.strictEqual(context.__blockedSegment, "inbound", "front-bumper entry must respect an active conflicting reservation");
+assert.strictEqual(context.__clearEntry, true, "entry should resume after conflicts clear");
+assert.deepStrictEqual(Array.from(context.__redCountdown), [39, 4, 1, 25]);
+assert.strictEqual(context.__wrapCountdown, 1);
+assert.strictEqual(context.__offsetCountdown, 31);
+
+loadScript(context, "src/intersection.render.js");
+vm.runInContext(`
+    computeGeometry();
+    globalThis.__signalClearance = Object.entries(geometry.signalHeads).every(([key, head]) => {
+        const arm = key.split("-")[0];
+        const armGeo = geometry.arms[arm];
+        const lateral = (head.x - armGeo.approachAnchor.x) * armGeo.side.x
+            + (head.y - armGeo.approachAnchor.y) * armGeo.side.y;
+        return Math.abs(lateral) < 0.001;
+    });
+    globalThis.ui = { showQueue: { checked: true } };
+    globalThis.__queuePoints = [];
+    globalThis.ctx = {
+        save() {}, restore() {}, beginPath() {}, closePath() {}, fill() {},
+        moveTo(x, y) { __queuePoints.push({x, y}); },
+        lineTo(x, y) { __queuePoints.push({x, y}); }
+    };
+    for (const arm of DIRS) state.queueDetectors[arm].currentQueue = arm === "N" ? 30 : 0;
+    drawQueueOverlays();
+    globalThis.__queueExtendsUpstream = __queuePoints[2].y < __queuePoints[1].y;
+`, context);
+assert.strictEqual(context.__signalClearance, true, "signals must stay on the median, outside vehicle lanes");
+assert.strictEqual(context.__queueExtendsUpstream, true, "queue shading must extend upstream from the stop line");
 
 console.log("release-check: all checks passed");

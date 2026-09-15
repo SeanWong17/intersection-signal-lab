@@ -195,6 +195,18 @@ class TrafficSignal {
         return this.allRed;
     }
 
+    getLaneCountdown(arm, lane, simTime) {
+        if (lane === "right") return null;
+        const snapshot = this.getStateAt(simTime);
+        const phaseIndex = getPhaseIndexForArm(arm);
+        if (snapshot.phaseIndex === phaseIndex && snapshot.stage !== "allred") {
+            return snapshot.countdown;
+        }
+        const cycle = this.getActualCycleLength();
+        const cycleTime = ((simTime + this.offset) % cycle + cycle) % cycle;
+        return (this.getPhaseStartOffset(phaseIndex) - cycleTime + cycle) % cycle;
+    }
+
     isLanePermitted(vehicle) {
         if (vehicle.turnIntent === "right") return true;
         const key = vehicle.segment === "inbound"

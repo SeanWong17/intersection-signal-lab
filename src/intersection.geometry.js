@@ -70,7 +70,6 @@ function computeGeometry() {
     const inboundBoundaryOffsets = getInboundBoundaryOffsets();
     const outboundBoundaryOffsets = getOutboundBoundaryOffsets();
     const signalLanes = ["left", "straight", "right"];
-    const signalUpstream = 46;
 
     for (const arm of DIRS) {
         const dir  = DIR_VECTORS[arm];
@@ -119,8 +118,8 @@ function computeGeometry() {
                 },
             };
             geometry.signalHeads[laneId(arm, lane)] = {
-                x: approachAnchor.x + side.x * offset + dir.x * signalUpstream,
-                y: approachAnchor.y + side.y * offset + dir.y * signalUpstream,
+                x: approachAnchor.x + dir.x * (24 + index * 48),
+                y: approachAnchor.y + dir.y * (24 + index * 48),
             };
         });
     }
